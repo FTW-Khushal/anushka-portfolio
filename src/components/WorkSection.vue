@@ -38,7 +38,7 @@ const handlePanelClick = (catId) => {
       <div class="container">
 
         <div class="section-header">
-          <span class="caption">02 // WORK CATEGORIES</span>
+          <!-- <span class="caption">02 // WORK CATEGORIES</span> -->
           <h2 class="section-title">Projects I have worked on</h2>
         </div>
 
@@ -110,10 +110,11 @@ const handlePanelClick = (catId) => {
   width: 100%;
   background-color: #000000;
   color: #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .work-section {
-  padding: 6rem 0;
+  padding: 8rem 0;
   position: relative;
 }
 

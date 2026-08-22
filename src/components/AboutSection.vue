@@ -30,7 +30,7 @@ const portraitImages = [
       <div class="two-column-grid">
         <!-- Left Column: Sticky Info -->
         <div class="info-column-sticky">
-          <span class="caption">01 // ABOUT ME</span>
+          <!-- <span class="caption">01 // ABOUT ME</span> -->
           <h2 class="section-title">Hi,I'm Anushka Shah — a Visual Effects Artist based in Vancouver with a focus on Lighting and Compositing.</h2>
           <p class="bio-text">
             I blend technical precision with artistic insight to craft cinematic visuals that support storytelling through light, color, and composition.
@@ -93,7 +93,7 @@ const portraitImages = [
 */
 
 .about-section {
-  padding: 8rem 0 0;
+  padding: 8rem 0;
   position: relative;
   background-color: #000000;
   color: #ffffff;

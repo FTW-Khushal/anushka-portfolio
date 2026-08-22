@@ -162,10 +162,10 @@ onUnmounted(() => {
          SECTION 1: FULL-WIDTH COMIC-BOOK STYLE DENSE MOSAIC TAPESTRY
          ========================================================================= -->
     <div class="mosaic-full-bleed-header container">
-      <div class="mosaic-badge">
+      <!-- <div class="mosaic-badge">
         <span class="pulse-spark"></span>
         <span>03 // MOMENTS </span>
-      </div>
+      </div> -->
 
       <h2 class="mosaic-header-title">
         A Tapestry of Marvelous Moments
@@ -255,7 +255,7 @@ onUnmounted(() => {
 
       <!-- Main Contact CTA -->
       <div class="contact-cta-box">
-        <span class="caption-cta">04 // GET IN TOUCH</span>
+        <!-- <span class="caption-cta">04 // GET IN TOUCH</span> -->
         <h2 class="cta-heading">Let's Create Marvelous Visual Moments Together.</h2>
         <p class="cta-desc">
           Interested in collaborating on Lighting, Compositing, VFX production, or Photography?
