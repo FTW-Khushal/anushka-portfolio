@@ -283,8 +283,20 @@ onUnmounted(() => {
 
   @media (min-width: 992px) {
     flex-direction: row;
-    height: 560px;
+    height: 580px;
     gap: 1rem;
+  }
+
+  @media (min-width: 1400px) {
+    flex-direction: row;
+    height: 680px;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 1800px) {
+    flex-direction: row;
+    height: 780px;
+    gap: 1.5rem;
   }
 }
 
@@ -499,6 +511,11 @@ onUnmounted(() => {
   @media (min-width: 600px) {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
 }
 
 .panel-project-card {
@@ -519,6 +536,18 @@ onUnmounted(() => {
   width: 100%;
   height: 140px;
   overflow: hidden;
+
+  @media (min-width: 992px) {
+    height: 150px;
+  }
+
+  @media (min-width: 1400px) {
+    height: 170px;
+  }
+
+  @media (min-width: 1800px) {
+    height: 200px;
+  }
 }
 
 .proj-img {

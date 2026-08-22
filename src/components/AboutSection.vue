@@ -110,24 +110,25 @@ const portraitImages = [
 
 @media (min-width: 992px) {
   .two-column-grid {
-    grid-template-columns: 1fr 1.35fr;
+    grid-template-columns: 1.15fr 1.35fr;
     gap: 4.5rem;
   }
 }
 
 @media (min-width: 1400px) {
   .two-column-grid {
-    grid-template-columns: 1fr 1.8fr;
+    grid-template-columns: 1.2fr 1.8fr;
     gap: 5rem;
   }
 }
 
 @media (min-width: 1800px) {
   .two-column-grid {
-    grid-template-columns: 1fr 2.2fr;
+    grid-template-columns: 1.25fr 2.2fr;
     gap: 5.5rem;
   }
 }
+
 
 
 /* Sticky Left Info Column */

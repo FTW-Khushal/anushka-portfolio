@@ -150,7 +150,7 @@ p {
 /* Layout Utilities */
 .container {
   width: 100%;
-  max-width: var(--container-max-width);
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -160,6 +160,31 @@ p {
     padding: 0 2.5rem;
   }
 }
+
+@media (min-width: 992px) {
+  .container {
+    max-width: 95%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1360px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1560px;
+  }
+}
+
+@media (min-width: 1800px) {
+  .container {
+    max-width: 1760px;
+  }
+}
+
 
 /* Interactive Elements */
 a {
