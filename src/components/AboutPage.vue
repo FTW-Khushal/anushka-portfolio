@@ -86,7 +86,10 @@ const handleHoverLeave = () => {
               <div class="row-details">
                 <h3 class="row-title">{{ item.title }}</h3>
                 <span class="row-org">{{ item.org }}</span>
-                <p class="row-summary">{{ item.summary }}</p>
+                <ul v-if="item.bullets" class="row-bullets">
+                  <li v-for="(bullet, idx) in item.bullets" :key="idx">{{ bullet }}</li>
+                </ul>
+                <p v-else class="row-summary">{{ item.summary }}</p>
               </div>
             </div>
           </div>
@@ -124,6 +127,17 @@ const handleHoverLeave = () => {
               <span class="item-name">{{ foundation.name }}</span>
             </li>
           </ul>
+        </section>
+
+        <hr class="minimal-divider" />
+
+        <section class="languages-section">
+          <h2 class="section-title">Languages</h2>
+          <div class="languages-list">
+            <span v-for="lang in aboutData.languages" :key="lang" class="lang-tag">
+              {{ lang }}
+            </span>
+          </div>
         </section>
 
         <div class="bottom-spacer"></div>
@@ -496,6 +510,52 @@ const handleHoverLeave = () => {
 
 .foundations-section {
   margin-top: 3.5rem;
+}
+
+/* Timeline row bullets */
+.row-bullets {
+  margin: 0.75rem 0 0;
+  padding-left: 1.1rem;
+  list-style-type: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.row-bullets li {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* Languages layout */
+.languages-section {
+  margin-top: 3.5rem;
+}
+
+.languages-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.lang-tag {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 30px;
+  letter-spacing: 0.02em;
+  transition: all 0.3s ease;
+}
+
+.lang-tag:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-2px);
 }
 
 .bottom-spacer {

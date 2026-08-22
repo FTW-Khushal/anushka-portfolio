@@ -3,7 +3,6 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { tapestryImages, fillerQuotes } from '../config/momentsData.js'
 
 const activeMomentModal = ref(null)
-const mosaicTrackRef = ref(null)
 
 const openMomentModal = (item) => {
   if (item.type === 'image') {
@@ -19,20 +18,6 @@ const closeMomentModal = () => {
 
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-// Convert vertical mouse wheel scrolling into smooth horizontal scroll
-const handleTrackWheel = (e) => {
-  if (!mosaicTrackRef.value) return
-  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-    const isAtEnd = mosaicTrackRef.value.scrollLeft + mosaicTrackRef.value.clientWidth >= mosaicTrackRef.value.scrollWidth - 10
-    const isAtStart = mosaicTrackRef.value.scrollLeft <= 10
-
-    if ((e.deltaY > 0 && !isAtEnd) || (e.deltaY < 0 && !isAtStart)) {
-      e.preventDefault()
-      mosaicTrackRef.value.scrollLeft += e.deltaY * 1.35
-    }
-  }
 }
 
 const handleKeyDown = (e) => {
@@ -163,16 +148,10 @@ const packedTapestry = computed(() => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
-  if (mosaicTrackRef.value) {
-    mosaicTrackRef.value.addEventListener('wheel', handleTrackWheel, { passive: false })
-  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
-  if (mosaicTrackRef.value) {
-    mosaicTrackRef.value.removeEventListener('wheel', handleTrackWheel)
-  }
   document.body.style.overflow = ''
 })
 </script>
@@ -183,43 +162,75 @@ onUnmounted(() => {
          SECTION 1: FULL-WIDTH COMIC-BOOK STYLE DENSE MOSAIC TAPESTRY
          ========================================================================= -->
     <div class="mosaic-full-bleed-header container">
-      <div class="mosaic-badge">
+      <!-- <div class="mosaic-badge">
         <span class="pulse-spark"></span>
         <span>03 // MOMENTS </span>
-      </div>
+      </div> -->
 
       <h2 class="mosaic-header-title">
         A Tapestry of Marvelous Moments
       </h2>
     </div>
 
-    <!-- Full Viewport Width Comic Panel Grid (No Gaps, No Text on Images) -->
+    <!-- Full Viewport Width Comic Panel Grid (Seamless Loop Marquee) -->
     <div class="full-width-tapestry-wrap">
-      <div ref="mosaicTrackRef" class="comic-mosaic-track">
-        <div class="mosaic-packed-container" :style="{ width: `${packedTapestry.totalWidth}px` }">
-          <template v-for="item in packedTapestry.items" :key="item.id">
-            <!-- Pure Artwork Panel (No Text Overlay) -->
-            <div
-              v-if="item.type === 'image'"
-              class="mosaic-item-card image-card"
-              :style="item.style"
-              @click="openMomentModal(item)"
-            >
-              <img :src="item.image" :alt="item.title" class="moment-img" loading="lazy" />
-            </div>
-
-            <!-- Thematic Comic Accent Filler Block -->
-            <div
-              v-else
-              class="mosaic-item-card filler-card"
-              :style="item.style"
-            >
-              <div class="filler-content">
-                <span class="filler-cat">{{ item.category }}</span>
-                <div class="filler-quote">{{ item.quote }}</div>
+      <div class="comic-mosaic-track">
+        <div class="mosaic-marquee-inner" :style="{ '--marquee-width': `${packedTapestry.totalWidth}px` }">
+          
+          <!-- First Set -->
+          <div class="mosaic-packed-container" :style="{ width: `${packedTapestry.totalWidth}px` }">
+            <template v-for="item in packedTapestry.items" :key="item.id">
+              <!-- Pure Artwork Panel (No Text Overlay) -->
+              <div
+                v-if="item.type === 'image'"
+                class="mosaic-item-card image-card"
+                :style="item.style"
+                @click="openMomentModal(item)"
+              >
+                <img :src="item.image" :alt="item.title" class="moment-img" loading="lazy" />
               </div>
-            </div>
-          </template>
+
+              <!-- Thematic Comic Accent Filler Block -->
+              <div
+                v-else
+                class="mosaic-item-card filler-card"
+                :style="item.style"
+              >
+                <div class="filler-content">
+                  <span class="filler-cat">{{ item.category }}</span>
+                  <div class="filler-quote">{{ item.quote }}</div>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <!-- Second Set (Duplicate for seamless loop) -->
+          <div class="mosaic-packed-container" :style="{ width: `${packedTapestry.totalWidth}px` }" aria-hidden="true">
+            <template v-for="item in packedTapestry.items" :key="'clone-' + item.id">
+              <!-- Pure Artwork Panel (No Text Overlay) -->
+              <div
+                v-if="item.type === 'image'"
+                class="mosaic-item-card image-card"
+                :style="item.style"
+                @click="openMomentModal(item)"
+              >
+                <img :src="item.image" :alt="item.title" class="moment-img" loading="lazy" />
+              </div>
+
+              <!-- Thematic Comic Accent Filler Block -->
+              <div
+                v-else
+                class="mosaic-item-card filler-card"
+                :style="item.style"
+              >
+                <div class="filler-content">
+                  <span class="filler-cat">{{ item.category }}</span>
+                  <div class="filler-quote">{{ item.quote }}</div>
+                </div>
+              </div>
+            </template>
+          </div>
+
         </div>
       </div>
     </div>
@@ -244,7 +255,7 @@ onUnmounted(() => {
 
       <!-- Main Contact CTA -->
       <div class="contact-cta-box">
-        <span class="caption-cta">04 // GET IN TOUCH</span>
+        <!-- <span class="caption-cta">04 // GET IN TOUCH</span> -->
         <h2 class="cta-heading">Let's Create Marvelous Visual Moments Together.</h2>
         <p class="cta-desc">
           Interested in collaborating on Lighting, Compositing, VFX production, or Photography?
@@ -379,24 +390,35 @@ onUnmounted(() => {
 .comic-mosaic-track {
   width: 100%;
   height: 560px; /* Accommodates 534px content + some padding */
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-behavior: smooth;
-  padding-bottom: 0.5rem;
-  -webkit-overflow-scrolling: touch;
-  
-  /* Hide all scrollbars */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overflow: hidden;
+  position: relative;
 }
 
-.comic-mosaic-track::-webkit-scrollbar {
-  display: none;
+.mosaic-marquee-inner {
+  display: flex;
+  gap: 14px; /* The exact gap used in grid layout */
+  width: max-content;
+  animation: marquee-scroll 40s linear infinite;
+}
+
+.mosaic-marquee-inner:hover {
+  animation-play-state: paused;
 }
 
 .mosaic-packed-container {
   position: relative;
   height: 534px;
+  flex-shrink: 0;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    /* Translate by exactly one full width of the container plus the gap */
+    transform: translate3d(calc(-1 * (var(--marquee-width) + 14px)), 0, 0);
+  }
 }
 
 /* Card Base Sizing & Packing */

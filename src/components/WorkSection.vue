@@ -1,10 +1,9 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { categoriesData, projectsData } from '../config/workData.js'
 
 const emit = defineEmits(['navigate'])
 
-// State for Option 2: 5-Panel Horizontal (Desktop) / Vertical Stack (Mobile) Accordion
 const activeAccordionId = ref('vfx') // default active panel
 
 const accordionCategories = computed(() => {
@@ -15,72 +14,31 @@ const getCategoryProjects = (catId) => {
   return projectsData.filter(p => p.category === catId)
 }
 
-const toggleAccordionPanel = (catId) => {
-  if (activeAccordionId.value === catId) {
-    activeAccordionId.value = '' // allow collapsing on mobile tap
+const handlePanelClick = (catId) => {
+  if (window.innerWidth < 992) {
+    if (activeAccordionId.value === catId) {
+      // Already expanded, so navigate
+      const targetPage = catId === 'vfx' ? 'visual-effects' : catId
+      emit('navigate', targetPage)
+    } else {
+      // Expand on first tap on mobile
+      activeAccordionId.value = catId
+    }
   } else {
-    activeAccordionId.value = catId
+    // Navigate immediately on desktop click since hover expands it
+    const targetPage = catId === 'vfx' ? 'visual-effects' : catId
+    emit('navigate', targetPage)
   }
 }
-
-// State for Option 3: Floating Cursor Preview
-const activeHoverProject = ref(null)
-const mousePos = ref({ x: 0, y: 0 })
-const cursorPreviewVisible = ref(false)
-
-// Lightbox Modal state (shared)
-const activeLightboxProject = ref(null)
-
-const openLightbox = (project) => {
-  activeLightboxProject.value = project
-  document.body.style.overflow = 'hidden'
-}
-
-const closeLightbox = () => {
-  activeLightboxProject.value = null
-  document.body.style.overflow = ''
-}
-
-// Floating Cursor Controls for Option 3
-const handleMouseMove = (e) => {
-  mousePos.value = { x: e.clientX, y: e.clientY }
-}
-
-const onRowMouseEnter = (project) => {
-  activeHoverProject.value = project
-  cursorPreviewVisible.value = true
-}
-
-const onRowMouseLeave = () => {
-  cursorPreviewVisible.value = false
-}
-
-const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && activeLightboxProject.value) {
-    closeLightbox()
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  document.body.style.overflow = ''
-})
 </script>
 
 <template>
   <div id="work" class="work-showcase-container">
-    <!-- =========================================================================
-         OPTION 2: 5-PANEL HORIZONTAL (DESKTOP) / VERTICAL (MOBILE) ACCORDION
-         ========================================================================= -->
-    <section class="work-section option-2-section">
+    <section class="work-section">
       <div class="container">
 
         <div class="section-header">
-          <span class="caption">02 // WORK CATEGORIES</span>
+          <!-- <span class="caption">02 // WORK CATEGORIES</span> -->
           <h2 class="section-title">Projects I have worked on</h2>
         </div>
 
@@ -92,12 +50,12 @@ onUnmounted(() => {
             class="accordion-panel"
             :class="{ 'expanded': activeAccordionId === cat.id }"
             @mouseenter="activeAccordionId = cat.id"
-            @click="toggleAccordionPanel(cat.id)"
+            @click="handlePanelClick(cat.id)"
           >
-            <!-- Background Preview Image for Panel -->
+            <!-- Background Cover Image for Panel -->
             <div class="panel-bg-wrap">
               <img
-                :src="getCategoryProjects(cat.id)[0]?.image || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1000&q=80'"
+                :src="cat.cover || getCategoryProjects(cat.id)[0]?.image || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1000&q=80'"
                 :alt="cat.name"
                 class="panel-bg"
               />
@@ -126,78 +84,24 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <!-- Expanded Panel Content -->
-            <div class="expanded-content">
-              <div class="panel-header">
-                <span class="panel-tag">{{ cat.count }} Projects</span>
-                <div class="panel-title-row">
-                  <h3 class="panel-title">{{ cat.name }}</h3>
-                  <button 
-                    v-if="cat.id === 'photography' || cat.id === 'art-design' || cat.id === 'visual-effects' || cat.id === 'archive'"
-                    class="view-gallery-btn"
-                    @click.stop="emit('navigate', cat.id)"
-                  >
-                    View Full Gallery &rarr;
-                  </button>
-                </div>
-              </div>
-
-              <!-- Projects Grid inside Panel -->
-              <div class="panel-projects-grid">
-                <div
-                  v-for="project in getCategoryProjects(cat.id)"
-                  :key="'acc-proj-' + project.id"
-                  class="panel-project-card"
-                  @click.stop="openLightbox(project)"
-                >
-                  <div class="card-media-box">
-                    <img :src="project.image" :alt="project.title" class="proj-img" />
-                  </div>
-                  <div class="proj-info">
-                    <div class="proj-title">{{ project.title }}</div>
-                    <div class="proj-year">{{ project.year }}</div>
-                  </div>
+            <!-- Expanded Category Label (Bottom Left, Crisp/No Blur) -->
+            <div class="expanded-info-panel">
+              <span class="category-meta">{{ cat.count }} Projects</span>
+              <div class="category-title-row">
+                <h3 class="category-name">{{ cat.name }}</h3>
+                <div class="arrow-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
     </section>
-
-    <!-- =========================================================================
-         FULLSCREEN LIGHTBOX MODAL
-         ========================================================================= -->
-    <transition name="modal-fade">
-      <div v-if="activeLightboxProject" class="lightbox-modal" @click.self="closeLightbox">
-        <div class="lightbox-content">
-          <button class="close-btn" @click="closeLightbox" aria-label="Close modal">&times;</button>
-          
-          <div class="lightbox-media-wrap">
-            <video
-              v-if="activeLightboxProject.video"
-              class="lightbox-media"
-              autoplay
-              loop
-              muted
-              playsinline
-            >
-              <source :src="activeLightboxProject.video" type="video/webm" />
-            </video>
-            <img v-else :src="activeLightboxProject.image" :alt="activeLightboxProject.title" class="lightbox-media" />
-          </div>
-
-          <div class="lightbox-details">
-            <div class="modal-tags">
-              <span class="modal-tag">{{ activeLightboxProject.categoryName }}</span>
-              <span class="modal-year">{{ activeLightboxProject.year }}</span>
-            </div>
-            <h2 class="modal-title">{{ activeLightboxProject.title }}</h2>
-            <p class="modal-desc">{{ activeLightboxProject.description }}</p>
-          </div>
-        </div>
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -206,34 +110,12 @@ onUnmounted(() => {
   width: 100%;
   background-color: #000000;
   color: #ffffff;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .work-section {
-  padding: 6rem 0;
+  padding: 8rem 0;
   position: relative;
-}
-
-/* Badges */
-.option-badge {
-  display: inline-block;
-  padding: 0.4rem 0.9rem;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  margin-bottom: 2rem;
-}
-
-.badge-amber {
-  color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.3);
-}
-
-.badge-purple {
-  color: #c084fc;
-  border-color: rgba(192, 132, 252, 0.3);
 }
 
 .section-header {
@@ -255,25 +137,8 @@ onUnmounted(() => {
   color: #ffffff;
 }
 
-/* Section Divider */
-.section-divider {
-  width: 100%;
-  padding: 3rem 0;
-  text-align: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: #050507;
-
-  span {
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    color: #64748b;
-  }
-}
-
 /* =========================================================================
-   OPTION 2: RESPONSIVE ACCORDION STYLES (Vertical Mobile Stack -> Horizontal Desktop)
+   RESPONSIVE ACCORDION STYLES (Vertical Mobile Stack -> Horizontal Desktop)
    ========================================================================= */
 .accordion-container {
   display: flex;
@@ -283,8 +148,20 @@ onUnmounted(() => {
 
   @media (min-width: 992px) {
     flex-direction: row;
-    height: 560px;
+    height: 580px;
     gap: 1rem;
+  }
+
+  @media (min-width: 1400px) {
+    flex-direction: row;
+    height: 680px;
+    gap: 1.25rem;
+  }
+
+  @media (min-width: 1800px) {
+    flex-direction: row;
+    height: 780px;
+    gap: 1.5rem;
   }
 }
 
@@ -300,8 +177,10 @@ onUnmounted(() => {
 
   @media (max-width: 991px) {
     min-height: 80px;
+    height: 80px;
 
     &.expanded {
+      height: 320px;
       border-color: rgba(255, 255, 255, 0.35);
     }
   }
@@ -328,19 +207,19 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.45);
+  filter: brightness(0.6);
   transition: transform 0.6s ease, filter 0.6s ease;
 }
 
 .accordion-panel.expanded .panel-bg {
-  filter: brightness(0.25);
-  transform: scale(1.05);
+  filter: brightness(0.75);
+  transform: scale(1.04);
 }
 
 .panel-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.85) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.8) 100%);
 }
 
 /* Collapsed Header Label */
@@ -421,36 +300,31 @@ onUnmounted(() => {
   transform: rotate(180deg);
 }
 
-/* Expanded Content */
-.expanded-content {
-  position: relative;
+/* Expanded Info Panel (Bottom Left, Crisp layout, no blur) */
+.expanded-info-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem;
   z-index: 3;
-  padding: 0 1.5rem 1.75rem;
-  display: none;
   opacity: 0;
-  transition: opacity 0.4s ease 0.15s;
+  pointer-events: none;
+  transition: opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s;
+  transform: translateY(10px);
 
   @media (min-width: 992px) {
-    height: 100%;
     padding: 2.25rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
   }
 }
 
-.accordion-panel.expanded .expanded-content {
-  display: flex;
-  flex-direction: column;
+.accordion-panel.expanded .expanded-info-panel {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
-.panel-header {
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-tag {
+.category-meta {
   font-size: 0.775rem;
   font-weight: 700;
   color: #f59e0b;
@@ -458,195 +332,37 @@ onUnmounted(() => {
   letter-spacing: 0.1em;
 }
 
-.panel-title-row {
+.category-title-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.25rem;
+  margin-top: 0.4rem;
 }
 
-.panel-title {
+.category-name {
   font-size: 1.65rem;
   font-weight: 800;
   color: #ffffff;
   margin: 0;
 }
 
-.view-gallery-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
-}
-
-.view-gallery-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateX(4px);
-}
-
-.panel-projects-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem;
-  margin-top: 1.25rem;
-
-  @media (min-width: 600px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.panel-project-card {
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  overflow: hidden;
-  backdrop-filter: blur(8px);
-  transition: transform 0.3s ease, border-color 0.3s ease;
-
-  &:hover {
-    transform: translateY(-4px);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-}
-
-.card-media-box {
-  width: 100%;
-  height: 140px;
-  overflow: hidden;
-}
-
-.proj-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.proj-info {
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.proj-title {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.proj-year {
-  font-size: 0.775rem;
-  color: #94a3b8;
-}
-
-
-/* =========================================================================
-   LIGHTBOX MODAL
-   ========================================================================= */
-.lightbox-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(16px);
-  z-index: 2000;
+.arrow-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
-}
-
-.lightbox-content {
-  position: relative;
-  width: 100%;
-  max-width: 900px;
-  background-color: #0d0e12;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.95);
-}
-
-.close-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1.25rem;
-  z-index: 10;
-  font-size: 2.25rem;
   color: #ffffff;
-  line-height: 1;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
 }
 
-.lightbox-media-wrap {
-  width: 100%;
-  max-height: 480px;
-  overflow: hidden;
-  background: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lightbox-media {
-  width: 100%;
-  max-height: 480px;
-  object-fit: contain;
-}
-
-.lightbox-details {
-  padding: 1.5rem;
-
-  @media (min-width: 768px) {
-    padding: 2rem;
-  }
-}
-
-.modal-tags {
-  display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.modal-tag {
-  color: #f59e0b;
-  text-transform: uppercase;
-}
-
-.modal-year {
-  color: #64748b;
-}
-
-.modal-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0 0 0.75rem;
-
-  @media (min-width: 768px) {
-    font-size: 1.75rem;
-  }
-}
-
-.modal-desc {
-  font-size: 0.95rem;
-  color: #cbd5e1;
-  line-height: 1.6;
-}
-
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
+.accordion-panel.expanded:hover .arrow-icon {
+  transform: translateX(5px);
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
 }
 </style>
