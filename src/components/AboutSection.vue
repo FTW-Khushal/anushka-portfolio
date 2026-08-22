@@ -31,7 +31,7 @@ const portraitImages = [
         <!-- Left Column: Sticky Info -->
         <div class="info-column-sticky">
           <span class="caption">01 // ABOUT ME</span>
-          <h2 class="section-title">Hi,I’m Anushka Shah — a Visual Effects Artist based in Vancouver with a focus on Lighting and Compositing.</h2>
+          <h2 class="section-title">Hi,I'm Anushka Shah — a Visual Effects Artist based in Vancouver with a focus on Lighting and Compositing.</h2>
           <p class="bio-text">
             I blend technical precision with artistic insight to craft cinematic visuals that support storytelling through light, color, and composition.
           </p>
@@ -51,12 +51,13 @@ const portraitImages = [
           </button>
         </div>
 
-        <!-- Right Column: Wider Portrait Images Vertical Scroll -->
+        <!-- Right Column: Stacking Portrait Cards -->
         <div class="images-column">
           <div
             v-for="(img, idx) in portraitImages"
             :key="img.id"
             class="portrait-card"
+            :style="{ zIndex: idx + 1 }"
           >
             <img :src="img.url" :alt="img.title" class="portrait-img" loading="lazy" />
             <div class="portrait-info-overlay">
@@ -72,15 +73,54 @@ const portraitImages = [
 </template>
 
 <style scoped>
+/*
+  Stacking approach:
+  - Each card is position:sticky with top matching the header area (~100px).
+  - Each card's height fills from that sticky top to the viewport bottom:
+    height: calc(100vh - var(--sticky-top)).
+  - Cards are in normal flow (flex column), so the total column height =
+    N × card-height, creating the scroll runway.
+  - z-index increments so the next card covers the previous one.
+  - object-fit:cover keeps portrait images looking great at any aspect ratio.
+
+  Potential issues addressed:
+  - No peeking: card fills viewport edge-to-edge vertically.
+  - Scroll runway: normal flow stacking creates enough height for all cards.
+  - Left column: remains sticky and shorter, so it stays visible throughout.
+  - Content below: once the section scrolls out, sticky releases naturally.
+  - Mobile: falls back to normal flow with aspect-ratio to avoid tall cards.
+  - Short viewports: min-height prevents cards from getting too small.
+*/
+
 .about-section {
-  padding: 8rem 0;
+  padding: 8rem 0 0;
   position: relative;
   background-color: #000000;
   color: #ffffff;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Two-Column Responsive Grid (Right column gets more width: 1fr 1.35fr) */
+/* Widen the container on larger screens so images get real estate */
+.about-section :deep(.container),
+.about-section .container {
+  max-width: var(--container-max-width);
+}
+
+@media (min-width: 1200px) {
+  .about-section :deep(.container),
+  .about-section .container {
+    max-width: 1600px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .about-section :deep(.container),
+  .about-section .container {
+    max-width: 1920px;
+  }
+}
+
+/* Two-Column Responsive Grid */
 .two-column-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -90,10 +130,25 @@ const portraitImages = [
 
 @media (min-width: 992px) {
   .two-column-grid {
-    grid-template-columns: 1fr 1.35fr;
+    grid-template-columns: 1.2fr 1.5fr;
     gap: 4.5rem;
   }
 }
+
+@media (min-width: 1200px) {
+  .two-column-grid {
+    grid-template-columns: 1.3fr 2fr;
+    gap: 5rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  .two-column-grid {
+    grid-template-columns: 1.3fr 2.5fr;
+    gap: 6rem;
+  }
+}
+
 
 /* Sticky Left Info Column */
 .info-column-sticky {
@@ -160,28 +215,29 @@ const portraitImages = [
   box-shadow: 0 10px 25px rgba(255, 255, 255, 0.25);
 }
 
-/* Vertical Scrolling Images Column */
+/* ── Stacking Images Column ── */
 .images-column {
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
 }
 
 .portrait-card {
-  position: relative;
+  --sticky-top: 100px;
+
+  position: sticky;
+  top: var(--sticky-top);
   width: 100%;
-  aspect-ratio: 3 / 4;
+  /* Fill viewport from sticky offset to bottom — one card per screen */
+  height: calc(100vh - var(--sticky-top));
+  min-height: 350px;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background-color: #0d0e12;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
-  transition: transform 0.4s ease, border-color 0.4s ease;
-}
-
-.portrait-card:hover {
-  transform: scale(1.02);
-  border-color: rgba(255, 255, 255, 0.3);
+  /* Top shadow sells the "sliding over" depth */
+  box-shadow:
+    0 -6px 24px rgba(0, 0, 0, 0.6),
+    0 16px 48px rgba(0, 0, 0, 0.7);
 }
 
 .portrait-img {
@@ -195,8 +251,8 @@ const portraitImages = [
   position: absolute;
   bottom: 0;
   inset-inline: 0;
-  padding: 2rem 1.5rem 1.5rem;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+  padding: 2.5rem 1.75rem 2rem;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
   display: flex;
   flex-direction: column;
 }
@@ -219,5 +275,22 @@ const portraitImages = [
   font-size: 0.85rem;
   color: #94a3b8;
   margin-top: 0.15rem;
+}
+
+/* ── Mobile: normal flow, no sticky ── */
+@media (max-width: 991px) {
+  .about-section {
+    padding: 4rem 0;
+  }
+
+  .portrait-card {
+    position: relative;
+    top: 0;
+    height: auto;
+    min-height: unset;
+    aspect-ratio: 3 / 4;
+    margin-bottom: 2rem;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  }
 }
 </style>
