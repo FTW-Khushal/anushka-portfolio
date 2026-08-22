@@ -4,11 +4,36 @@
  */
 export const categoriesData = [
   { id: 'all', name: 'All Works', count: 8 },
-  { id: 'vfx', name: 'VFX Artist', count: 2 },
-  { id: 'photography', name: 'Photography', count: 2 },
-  { id: 'visual-effects', name: 'Visual Effects', count: 2 },
-  { id: 'art-design', name: 'Art & Design', count: 1 },
-  { id: 'archive', name: 'Archive', count: 1 }
+  { 
+    id: 'vfx', 
+    name: 'VFX Artist', 
+    count: 2,
+    cover: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80'
+  },
+  { 
+    id: 'photography', 
+    name: 'Photography', 
+    count: 2,
+    cover: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80'
+  },
+  { 
+    id: 'visual-effects', 
+    name: 'Visual Effects', 
+    count: 2,
+    cover: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80'
+  },
+  { 
+    id: 'art-design', 
+    name: 'Art & Design', 
+    count: 1,
+    cover: 'https://images.unsplash.com/photo-1776244798324-3375e443d534?q=80&w=2064&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+  },
+  { 
+    id: 'archive', 
+    name: 'Archive', 
+    count: 1,
+    cover: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1000&q=80'
+  }
 ]
 
 export const projectsData = [
