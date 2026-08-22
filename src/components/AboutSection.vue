@@ -100,26 +100,6 @@ const portraitImages = [
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Widen the container on larger screens so images get real estate */
-.about-section :deep(.container),
-.about-section .container {
-  max-width: var(--container-max-width);
-}
-
-@media (min-width: 1200px) {
-  .about-section :deep(.container),
-  .about-section .container {
-    max-width: 1600px;
-  }
-}
-
-@media (min-width: 1600px) {
-  .about-section :deep(.container),
-  .about-section .container {
-    max-width: 1920px;
-  }
-}
-
 /* Two-Column Responsive Grid */
 .two-column-grid {
   display: grid;
@@ -130,22 +110,22 @@ const portraitImages = [
 
 @media (min-width: 992px) {
   .two-column-grid {
-    grid-template-columns: 1.2fr 1.5fr;
+    grid-template-columns: 1fr 1.35fr;
     gap: 4.5rem;
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1400px) {
   .two-column-grid {
-    grid-template-columns: 1.3fr 2fr;
+    grid-template-columns: 1fr 1.8fr;
     gap: 5rem;
   }
 }
 
-@media (min-width: 1600px) {
+@media (min-width: 1800px) {
   .two-column-grid {
-    grid-template-columns: 1.3fr 2.5fr;
-    gap: 6rem;
+    grid-template-columns: 1fr 2.2fr;
+    gap: 5.5rem;
   }
 }
 
