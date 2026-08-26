@@ -262,8 +262,8 @@ onUnmounted(() => {
         </p>
 
         <div class="cta-actions">
-          <a href="mailto:hello@anushkashah.dev" class="email-btn">
-            <span>hello@anushkashah.dev</span>
+          <a href="mailto:ajs197430@gmail.com" class="email-btn">
+            <span>ajs197430@gmail.com</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="5" y1="12" x2="19" y2="12"></line>
               <polyline points="12 5 19 12 12 19"></polyline>
@@ -284,11 +284,11 @@ onUnmounted(() => {
         </div>
 
         <div class="social-nav">
-          <a href="https://linkedin.com" target="_blank" rel="noopener" class="social-link">LinkedIn</a>
-          <a href="https://artstation.com" target="_blank" rel="noopener" class="social-link">ArtStation</a>
-          <a href="https://imdb.com" target="_blank" rel="noopener" class="social-link">IMDb</a>
-          <a href="https://vimeo.com" target="_blank" rel="noopener" class="social-link">Vimeo / Reel</a>
-          <a href="https://instagram.com" target="_blank" rel="noopener" class="social-link">Instagram</a>
+          <a href="https://www.linkedin.com/in/anushka-j-shah/" target="_blank" rel="noopener" class="social-link">LinkedIn</a>
+          <!-- <a href="https://www.artstation.com/anushkajshah" target="_blank" rel="noopener" class="social-link">ArtStation</a> -->
+          <!-- <a href="https://www.imdb.com/name/nm14953784/" target="_blank" rel="noopener" class="social-link">IMDb</a> -->
+          <a href="https://vimeo.com/anushkashah" target="_blank" rel="noopener" class="social-link">Vimeo / Reel</a>
+          <a href="https://www.instagram.com/anushah3008/" target="_blank" rel="noopener" class="social-link">Instagram</a>
         </div>
       </div>
 
@@ -609,7 +609,7 @@ onUnmounted(() => {
    ========================================================================= */
 .footer-links-bar {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 3.5rem 0 2.5rem;
+  padding: 3.5rem 1.25rem 2.5rem;
 }
 
 .links-row {
@@ -622,6 +622,8 @@ onUnmounted(() => {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    padding-right: 2.25rem;
+    padding-left: 2.25rem;
   }
 }
 
