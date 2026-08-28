@@ -15,8 +15,8 @@ const goBack = () => {
 }
 
 // Camera Viewfinder & Gyroscope Controls
-const currentPanX = ref(0) // Smoothed pan percentage (-20% to 20%)
-const currentPanY = ref(0) // Smoothed pitch percentage (-10% to 10%)
+const currentPanX = ref(0) // Smoothed pan percentage (-38% to 38%)
+const currentPanY = ref(0) // Smoothed pitch percentage (-14% to 14%)
 const rollAngle = ref(0)   // Sensor roll angle for horizon level indicator
 const isGyroActive = ref(false)
 const needsGyroPermission = ref(false)
@@ -30,6 +30,7 @@ let animFrameId = null
 let timecodeInterval = null
 let autoPanAngle = 0
 let lastInteractionTime = Date.now()
+let initialAlpha = null
 
 // Touch Drag tracking
 let touchStartX = 0
@@ -49,6 +50,11 @@ const updateTimecode = () => {
   timecode.value = `${String(hrs).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(ms).padStart(2, '0')}`
 }
 
+// Recenter Gyro Zero Point
+const recenterGyro = () => {
+  initialAlpha = null
+}
+
 // Smooth Animation Loop (LERP)
 const animate = () => {
   const now = Date.now()
@@ -57,34 +63,51 @@ const animate = () => {
   if (isIdle) {
     // Gentle floating auto-pan when untouched
     autoPanAngle += 0.004
-    targetPanX = Math.sin(autoPanAngle) * 10
-    targetPanY = Math.cos(autoPanAngle * 0.7) * 4
+    targetPanX = Math.sin(autoPanAngle) * 16
+    targetPanY = Math.cos(autoPanAngle * 0.7) * 6
     targetRoll = Math.sin(autoPanAngle * 0.5) * 2
   }
 
   // Smooth LERP physics (dampening)
-  currentPanX.value += (targetPanX - currentPanX.value) * 0.06
-  currentPanY.value += (targetPanY - currentPanY.value) * 0.06
-  rollAngle.value += (targetRoll - rollAngle.value) * 0.08
+  currentPanX.value += (targetPanX - currentPanX.value) * 0.07
+  currentPanY.value += (targetPanY - currentPanY.value) * 0.07
+  rollAngle.value += (targetRoll - rollAngle.value) * 0.09
 
   animFrameId = requestAnimationFrame(animate)
 }
 
 // Handle Device Orientation Event (Gyroscope)
 const handleOrientation = (e) => {
-  if (e.gamma === null && e.beta === null) return
+  if (e.beta === null && e.gamma === null) return
   isGyroActive.value = true
   lastInteractionTime = Date.now()
 
-  // Gamma is left/right roll (-90 to 90 deg). We cap standard comfortable tilt at -45 to 45 deg.
-  const gamma = Math.max(-45, Math.min(45, e.gamma || 0))
-  // Beta is front/back pitch (-180 to 180 deg). We adjust around natural holding angle (~45 deg)
-  const beta = Math.max(-20, Math.min(20, (e.beta || 45) - 45))
+  const alpha = e.alpha || 0
+  const beta = e.beta || 0
+  const gamma = e.gamma || 0
 
-  // Map to background pan range
-  targetPanX = (gamma / 45) * -22 // Reverse so tilting right pans camera view right
-  targetPanY = (beta / 20) * -10
-  targetRoll = gamma * 0.5
+  if (initialAlpha === null) {
+    initialAlpha = alpha
+  }
+
+  // Calculate shortest angle delta for alpha (yaw / swivel left-right)
+  let diffAlpha = alpha - initialAlpha
+  if (diffAlpha > 180) diffAlpha -= 360
+  if (diffAlpha < -180) diffAlpha += 360
+
+  // Combine swivel (diffAlpha) and tilt (gamma) so both ways of turning phone work!
+  const combinedX = (diffAlpha * 0.9) + (gamma * 0.8)
+
+  // Clamp combined X to [-45, 45]
+  const clampedX = Math.max(-45, Math.min(45, combinedX))
+
+  // Pitch (up/down): natural holding pitch is around 45 deg
+  const clampedY = Math.max(-25, Math.min(25, beta - 45))
+
+  // Map to background pan range (-38% to 38% for dramatic left/right panning)
+  targetPanX = (clampedX / 45) * -38 // Reverse so turning right pans camera view right
+  targetPanY = (clampedY / 25) * -14
+  targetRoll = Math.max(-15, Math.min(15, gamma * 0.4))
 }
 
 // Request Permission for iOS 13+
@@ -94,6 +117,7 @@ const requestGyroPermission = async () => {
       const permission = await DeviceOrientationEvent.requestPermission()
       if (permission === 'granted') {
         needsGyroPermission.value = false
+        initialAlpha = null
         window.addEventListener('deviceorientation', handleOrientation)
       } else {
         alert('Permission denied. Touch or drag to pan the camera view.')
@@ -125,9 +149,9 @@ const handleMouseMove = (e) => {
   const normX = (e.clientX / innerWidth) - 0.5 // -0.5 to 0.5
   const normY = (e.clientY / innerHeight) - 0.5
 
-  targetPanX = normX * -25 // Pan up to 12.5%
-  targetPanY = normY * -12
-  targetRoll = normX * -4
+  targetPanX = normX * -35 // Pan up to 17.5%
+  targetPanY = normY * -14
+  targetRoll = normX * -5
 }
 
 const handleMouseLeave = () => {
@@ -154,8 +178,8 @@ const handleTouchMove = (e) => {
     const deltaY = e.touches[0].clientY - touchStartY
     
     // Scale delta to percentage pan
-    targetPanX = Math.max(-25, Math.min(25, initialPanX + (deltaX / window.innerWidth) * 45))
-    targetPanY = Math.max(-12, Math.min(12, initialPanY + (deltaY / window.innerHeight) * 20))
+    targetPanX = Math.max(-38, Math.min(38, initialPanX + (deltaX / window.innerWidth) * 60))
+    targetPanY = Math.max(-14, Math.min(14, initialPanY + (deltaY / window.innerHeight) * 25))
   }
 }
 
@@ -417,10 +441,10 @@ onUnmounted(() => {
 
 .hero-bg-image {
   position: absolute;
-  top: -15%;
-  left: -15%;
-  width: 130%;
-  height: 130%;
+  top: -20%;
+  left: -40%;
+  width: 180%;
+  height: 140%;
   background-image: url('https://cdn.prod.website-files.com/680aa9a18fba68b1fec52c0d/680ab8a0a657e2b0ad0bf586_Screenshot2025-04-1322424.jpeg');
   background-size: cover;
   background-position: center;
