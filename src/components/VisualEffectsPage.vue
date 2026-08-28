@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BeforeAfterSlider from './BeforeAfterSlider.vue'
 import { projectsData } from '../config/workData.js'
 
@@ -13,6 +13,172 @@ const vfxProjects = computed(() => {
 const goBack = () => {
   emit('navigate', 'home')
 }
+
+// Camera Viewfinder & Gyroscope Controls
+const currentPanX = ref(0) // Smoothed pan percentage (-20% to 20%)
+const currentPanY = ref(0) // Smoothed pitch percentage (-10% to 10%)
+const rollAngle = ref(0)   // Sensor roll angle for horizon level indicator
+const isGyroActive = ref(false)
+const needsGyroPermission = ref(false)
+const timecode = ref('00:00:00:00')
+const isHoveredOrTouched = ref(false)
+
+let targetPanX = 0
+let targetPanY = 0
+let targetRoll = 0
+let animFrameId = null
+let timecodeInterval = null
+let autoPanAngle = 0
+let lastInteractionTime = Date.now()
+
+// Touch Drag tracking
+let touchStartX = 0
+let touchStartY = 0
+let initialPanX = 0
+let initialPanY = 0
+
+// Format Timecode
+let startTime = Date.now()
+const updateTimecode = () => {
+  const elapsed = Date.now() - startTime
+  const ms = Math.floor((elapsed % 1000) / 40)
+  const sec = Math.floor((elapsed / 1000) % 60)
+  const min = Math.floor((elapsed / (1000 * 60)) % 60)
+  const hrs = Math.floor((elapsed / (1000 * 60 * 60)) % 24)
+  
+  timecode.value = `${String(hrs).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(ms).padStart(2, '0')}`
+}
+
+// Smooth Animation Loop (LERP)
+const animate = () => {
+  const now = Date.now()
+  const isIdle = !isGyroActive.value && !isHoveredOrTouched.value && (now - lastInteractionTime > 2000)
+
+  if (isIdle) {
+    // Gentle floating auto-pan when untouched
+    autoPanAngle += 0.004
+    targetPanX = Math.sin(autoPanAngle) * 10
+    targetPanY = Math.cos(autoPanAngle * 0.7) * 4
+    targetRoll = Math.sin(autoPanAngle * 0.5) * 2
+  }
+
+  // Smooth LERP physics (dampening)
+  currentPanX.value += (targetPanX - currentPanX.value) * 0.06
+  currentPanY.value += (targetPanY - currentPanY.value) * 0.06
+  rollAngle.value += (targetRoll - rollAngle.value) * 0.08
+
+  animFrameId = requestAnimationFrame(animate)
+}
+
+// Handle Device Orientation Event (Gyroscope)
+const handleOrientation = (e) => {
+  if (e.gamma === null && e.beta === null) return
+  isGyroActive.value = true
+  lastInteractionTime = Date.now()
+
+  // Gamma is left/right roll (-90 to 90 deg). We cap standard comfortable tilt at -45 to 45 deg.
+  const gamma = Math.max(-45, Math.min(45, e.gamma || 0))
+  // Beta is front/back pitch (-180 to 180 deg). We adjust around natural holding angle (~45 deg)
+  const beta = Math.max(-20, Math.min(20, (e.beta || 45) - 45))
+
+  // Map to background pan range
+  targetPanX = (gamma / 45) * -22 // Reverse so tilting right pans camera view right
+  targetPanY = (beta / 20) * -10
+  targetRoll = gamma * 0.5
+}
+
+// Request Permission for iOS 13+
+const requestGyroPermission = async () => {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const permission = await DeviceOrientationEvent.requestPermission()
+      if (permission === 'granted') {
+        needsGyroPermission.value = false
+        window.addEventListener('deviceorientation', handleOrientation)
+      } else {
+        alert('Permission denied. Touch or drag to pan the camera view.')
+      }
+    } catch (err) {
+      console.error('Gyro permission error:', err)
+    }
+  }
+}
+
+// Check if iOS permission is required or register gyro event listener
+const checkGyroSupport = () => {
+  if (typeof window !== 'undefined' && typeof DeviceOrientationEvent !== 'undefined') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      needsGyroPermission.value = true
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation)
+    }
+  }
+}
+
+// Mouse Move Parallax (Desktop)
+const handleMouseMove = (e) => {
+  if (isGyroActive.value) return
+  isHoveredOrTouched.value = true
+  lastInteractionTime = Date.now()
+
+  const { innerWidth, innerHeight } = window
+  const normX = (e.clientX / innerWidth) - 0.5 // -0.5 to 0.5
+  const normY = (e.clientY / innerHeight) - 0.5
+
+  targetPanX = normX * -25 // Pan up to 12.5%
+  targetPanY = normY * -12
+  targetRoll = normX * -4
+}
+
+const handleMouseLeave = () => {
+  isHoveredOrTouched.value = false
+  lastInteractionTime = Date.now()
+}
+
+// Touch Drag Handlers (Mobile Fallback / Touch Pan)
+const handleTouchStart = (e) => {
+  if (e.touches.length === 1) {
+    isHoveredOrTouched.value = true
+    lastInteractionTime = Date.now()
+    touchStartX = e.touches[0].clientX
+    touchStartY = e.touches[0].clientY
+    initialPanX = targetPanX
+    initialPanY = targetPanY
+  }
+}
+
+const handleTouchMove = (e) => {
+  if (e.touches.length === 1 && isHoveredOrTouched.value) {
+    lastInteractionTime = Date.now()
+    const deltaX = e.touches[0].clientX - touchStartX
+    const deltaY = e.touches[0].clientY - touchStartY
+    
+    // Scale delta to percentage pan
+    targetPanX = Math.max(-25, Math.min(25, initialPanX + (deltaX / window.innerWidth) * 45))
+    targetPanY = Math.max(-12, Math.min(12, initialPanY + (deltaY / window.innerHeight) * 20))
+  }
+}
+
+const handleTouchEnd = () => {
+  isHoveredOrTouched.value = false
+  lastInteractionTime = Date.now()
+}
+
+onMounted(() => {
+  checkGyroSupport()
+  animFrameId = requestAnimationFrame(animate)
+  timecodeInterval = setInterval(updateTimecode, 40)
+  window.addEventListener('mousemove', handleMouseMove)
+})
+
+onUnmounted(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId)
+  if (timecodeInterval) clearInterval(timecodeInterval)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('deviceorientation', handleOrientation)
+    window.removeEventListener('mousemove', handleMouseMove)
+  }
+})
 </script>
 
 <template>
@@ -21,14 +187,91 @@ const goBack = () => {
     <div class="film-grain"></div>
 
     <!-- Full-Width Hero Section -->
-    <section class="hero-section">
+    <section 
+      class="hero-section"
+      @mouseleave="handleMouseLeave"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
       <div class="hero-bg-container">
-        <div class="hero-bg-image"></div>
+        <div 
+          class="hero-bg-image"
+          :style="{
+            transform: `scale(1.25) translate3d(${currentPanX}%, ${currentPanY}%, 0)`
+          }"
+        ></div>
         <div class="hero-bg-overlay"></div>
       </div>
-      <div class="hero-content container">
 
-        
+      <!-- Camera Viewfinder HUD Overlay -->
+      <div class="viewfinder-hud">
+        <!-- Corner Frame Brackets -->
+        <div class="corner-reticle top-left"></div>
+        <div class="corner-reticle top-right"></div>
+        <div class="corner-reticle bottom-left"></div>
+        <div class="corner-reticle bottom-right"></div>
+
+        <!-- Top Status Bar -->
+        <div class="hud-top-bar">
+          <div class="rec-badge">
+            <span class="rec-dot"></span>
+            <span class="rec-text">REC</span>
+            <span class="timecode">{{ timecode }}</span>
+          </div>
+          <div class="format-badge">
+            <span class="spec-tag">4K DCI</span>
+            <span class="spec-tag">RAW 60FPS</span>
+          </div>
+        </div>
+
+        <!-- Center Aim Crosshair / Focus Frame -->
+        <div class="hud-center-target">
+          <div class="target-box">
+            <div class="target-cross"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Spec & Gyro Controls Bar -->
+        <div class="hud-bottom-bar">
+          <div class="camera-specs">
+            <span>ISO 800</span>
+            <span>1/48s</span>
+            <span>f/2.8</span>
+            <span>PRORES 4444</span>
+          </div>
+
+          <!-- Electronic Horizon Level Indicator -->
+          <div class="horizon-level-wrapper" title="Electronic Horizon Level">
+            <div class="horizon-line" :style="{ transform: `rotate(${rollAngle}deg)` }">
+              <span class="level-center-dot"></span>
+            </div>
+          </div>
+
+          <!-- Gyro Sensor Control / Mode Status -->
+          <div class="gyro-status-badge">
+            <button 
+              v-if="needsGyroPermission && !isGyroActive" 
+              class="gyro-enable-btn"
+              @click="requestGyroPermission"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+              ENABLE LENS GYRO
+            </button>
+            <div v-else-if="isGyroActive" class="gyro-active-indicator">
+              <span class="pulse-icon"></span>
+              GYRO PAN ACTIVE
+            </div>
+            <div v-else class="gyro-hint-indicator">
+              <span class="drag-icon">↔</span>
+              TILT OR SWIPE TO PAN
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Content Container -->
+      <div class="hero-content container">
         <div class="hero-title-wrapper">
           <h1 class="hero-title">VISUAL EFFECTS</h1>
           <p class="hero-description">
@@ -174,15 +417,309 @@ const goBack = () => {
 
 .hero-bg-image {
   position: absolute;
-  top: 0;
-  left: -5%;
-  width: 110%;
-  height: 100%;
+  top: -15%;
+  left: -15%;
+  width: 130%;
+  height: 130%;
   background-image: url('https://cdn.prod.website-files.com/680aa9a18fba68b1fec52c0d/680ab8a0a657e2b0ad0bf586_Screenshot2025-04-1322424.jpeg');
   background-size: cover;
   background-position: center;
-  /* Camera Pan Animation */
-  animation: cameraPan 35s linear infinite alternate;
+  will-change: transform;
+  transition: transform 0.05s ease-out;
+}
+
+.hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(5,5,5,1) 0%, rgba(5,5,5,0.4) 50%, rgba(5,5,5,0.7) 100%);
+}
+
+/* Camera Viewfinder HUD Overlay */
+.viewfinder-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Corner Frame Brackets */
+.corner-reticle {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: rgba(255, 255, 255, 0.4);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.top-left {
+  top: 1.5rem;
+  left: 1.5rem;
+  border-width: 2px 0 0 2px;
+}
+
+.top-right {
+  top: 1.5rem;
+  right: 1.5rem;
+  border-width: 2px 2px 0 0;
+}
+
+.bottom-left {
+  bottom: 1.5rem;
+  left: 1.5rem;
+  border-width: 0 0 2px 2px;
+}
+
+.bottom-right {
+  bottom: 1.5rem;
+  right: 1.5rem;
+  border-width: 0 2px 2px 0;
+}
+
+/* Top Status Bar */
+.hud-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 0.5rem;
+}
+
+.rec-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: monospace, monospace;
+  font-size: 0.85rem;
+  color: #ffffff;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  animation: recBlink 1.2s infinite;
+}
+
+@keyframes recBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.rec-text {
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.05em;
+}
+
+.timecode {
+  color: #e2e8f0;
+  margin-left: 0.4rem;
+  font-weight: 600;
+}
+
+.format-badge {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.spec-tag {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+/* Center Reticle Target */
+.hud-center-target {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.target-box {
+  width: 50px;
+  height: 50px;
+  border: 1px dashed rgba(255, 255, 255, 0.6);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.target-cross {
+  width: 10px;
+  height: 10px;
+  position: relative;
+}
+
+.target-cross::before, .target-cross::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.target-cross::before {
+  top: 4px;
+  left: 0;
+  width: 10px;
+  height: 2px;
+}
+
+.target-cross::after {
+  top: 0;
+  left: 4px;
+  width: 2px;
+  height: 10px;
+}
+
+/* Bottom Bar Specs & Horizon Level */
+.hud-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-bottom: 0.5rem;
+  gap: 1rem;
+}
+
+.camera-specs {
+  display: flex;
+  gap: 0.8rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Electronic Horizon Level */
+.horizon-level-wrapper {
+  width: 90px;
+  height: 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.horizon-line {
+  width: 60px;
+  height: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+  position: relative;
+  transition: transform 0.1s linear;
+}
+
+.level-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 50%;
+}
+
+/* Gyro Button & Status Indicators */
+.gyro-status-badge {
+  pointer-events: auto;
+}
+
+.gyro-enable-btn {
+  background: rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.3s ease;
+}
+
+.gyro-enable-btn:hover {
+  background: rgba(56, 189, 248, 0.35);
+  transform: scale(1.05);
+}
+
+.gyro-active-indicator, .gyro-hint-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pulse-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+  animation: recBlink 1.5s infinite;
+}
+
+.drag-icon {
+  color: #38bdf8;
+}
+
+@media (max-width: 768px) {
+  .camera-specs {
+    display: none; /* Hide dense specs on small screens to keep UI clean */
+  }
+  
+  .spec-tag:not(:first-child) {
+    display: none;
+  }
+  
+  .viewfinder-hud {
+    padding: 1rem;
+  }
+  
+  .top-left { top: 1rem; left: 1rem; }
+  .top-right { top: 1rem; right: 1rem; }
+  .bottom-left { bottom: 1rem; left: 1rem; }
+  .bottom-right { bottom: 1rem; right: 1rem; }
 }
 
 .hero-bg-overlay {
