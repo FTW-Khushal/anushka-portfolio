@@ -14,11 +14,17 @@ const getCategoryProjects = (catId) => {
   return projectsData.filter(p => p.category === catId)
 }
 
+const handleMouseEnter = (catId) => {
+  if (window.innerWidth >= 992) {
+    activeAccordionId.value = catId
+  }
+}
+
 const handlePanelClick = (catId) => {
+  const targetPage = catId === 'vfx' ? 'visual-effects' : catId
   if (window.innerWidth < 992) {
     if (activeAccordionId.value === catId) {
-      // Already expanded, so navigate
-      const targetPage = catId === 'vfx' ? 'visual-effects' : catId
+      // Already expanded, tap navigates to category page
       emit('navigate', targetPage)
     } else {
       // Expand on first tap on mobile
@@ -26,7 +32,6 @@ const handlePanelClick = (catId) => {
     }
   } else {
     // Navigate immediately on desktop click since hover expands it
-    const targetPage = catId === 'vfx' ? 'visual-effects' : catId
     emit('navigate', targetPage)
   }
 }
@@ -49,7 +54,7 @@ const handlePanelClick = (catId) => {
             :key="'acc-' + cat.id"
             class="accordion-panel"
             :class="{ 'expanded': activeAccordionId === cat.id }"
-            @mouseenter="activeAccordionId = cat.id"
+            @mouseenter="handleMouseEnter(cat.id)"
             @click="handlePanelClick(cat.id)"
           >
             <!-- Background Cover Image for Panel -->
@@ -114,7 +119,7 @@ const handlePanelClick = (catId) => {
 }
 
 .work-section {
-  padding: 8rem 0;
+  padding: 4rem 0;
   position: relative;
 }
 
@@ -138,31 +143,13 @@ const handlePanelClick = (catId) => {
 }
 
 /* =========================================================================
-   RESPONSIVE ACCORDION STYLES (Vertical Mobile Stack -> Horizontal Desktop)
+   ACCORDION CONTAINER & PANELS (Mobile-First Stack -> Desktop Row)
    ========================================================================= */
 .accordion-container {
   display: flex;
   flex-direction: column;
   height: auto;
   gap: 1.25rem;
-
-  @media (min-width: 992px) {
-    flex-direction: row;
-    height: 580px;
-    gap: 1rem;
-  }
-
-  @media (min-width: 1400px) {
-    flex-direction: row;
-    height: 680px;
-    gap: 1.25rem;
-  }
-
-  @media (min-width: 1800px) {
-    flex-direction: row;
-    height: 780px;
-    gap: 1.5rem;
-  }
 }
 
 .accordion-panel {
@@ -173,26 +160,15 @@ const handlePanelClick = (catId) => {
   background-color: #0d0e12;
   cursor: pointer;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  flex: 1;
+  min-height: 80px;
+  height: 80px;
+  flex: none;
+}
 
-  @media (max-width: 991px) {
-    min-height: 80px;
-    height: 80px;
-
-    &.expanded {
-      height: 320px;
-      border-color: rgba(255, 255, 255, 0.35);
-    }
-  }
-
-  @media (min-width: 992px) {
-    flex: 0.7;
-
-    &.expanded {
-      flex: 4;
-      border-color: rgba(255, 255, 255, 0.35);
-    }
-  }
+.accordion-panel.expanded {
+  height: 270px;
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .panel-bg-wrap {
@@ -207,55 +183,43 @@ const handlePanelClick = (catId) => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.6);
+  filter: brightness(0.5);
   transition: transform 0.6s ease, filter 0.6s ease;
 }
 
 .accordion-panel.expanded .panel-bg {
-  filter: brightness(0.75);
+  filter: brightness(0.7);
   transform: scale(1.04);
 }
 
 .panel-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 50%, rgba(0, 0, 0, 0.8) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 30%, rgba(0, 0, 0, 0.85) 100%);
 }
 
 /* Collapsed Header Label */
 .collapsed-label {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-
-  @media (min-width: 992px) {
-    position: absolute;
-    inset: 0;
-    flex-direction: column;
-    padding: 2rem 1rem;
-    opacity: 1;
-    transition: opacity 0.4s ease;
-  }
+  padding: 1.25rem 1.5rem;
+  opacity: 1;
+  transition: opacity 0.4s ease;
 }
 
-@media (min-width: 992px) {
-  .accordion-panel.expanded .collapsed-label {
-    opacity: 0;
-    pointer-events: none;
-  }
+.accordion-panel.expanded .collapsed-label {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .collapsed-header-text {
   display: flex;
   align-items: center;
   gap: 1rem;
-
-  @media (min-width: 992px) {
-    flex-direction: column;
-  }
 }
 
 .vertical-title {
@@ -265,18 +229,13 @@ const handlePanelClick = (catId) => {
   color: #ffffff;
   white-space: nowrap;
   letter-spacing: 0.05em;
-
-  @media (min-width: 992px) {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-  }
 }
 
 .panel-count {
   font-size: 0.775rem;
   font-weight: 700;
   padding: 0.25rem 0.65rem;
-  border-radius: 100%;
+  border-radius: 100px;
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   backdrop-filter: blur(8px);
@@ -286,10 +245,6 @@ const handlePanelClick = (catId) => {
   display: flex;
   align-items: center;
   color: #ffffff;
-
-  @media (min-width: 992px) {
-    display: none;
-  }
 }
 
 .chevron-svg {
@@ -300,7 +255,7 @@ const handlePanelClick = (catId) => {
   transform: rotate(180deg);
 }
 
-/* Expanded Info Panel (Bottom Left, Crisp layout, no blur) */
+/* Expanded Info Panel */
 .expanded-info-panel {
   position: absolute;
   bottom: 0;
@@ -310,12 +265,8 @@ const handlePanelClick = (catId) => {
   z-index: 3;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s;
+  transition: opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s;
   transform: translateY(10px);
-
-  @media (min-width: 992px) {
-    padding: 2.25rem;
-  }
 }
 
 .accordion-panel.expanded .expanded-info-panel {
@@ -355,14 +306,74 @@ const handlePanelClick = (catId) => {
   height: 44px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
-  transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-.accordion-panel.expanded:hover .arrow-icon {
+.accordion-panel.expanded:hover .arrow-icon,
+.accordion-panel.expanded:active .arrow-icon {
   transform: translateX(5px);
   background: #ffffff;
   color: #000000;
   border-color: #ffffff;
+}
+
+/* =========================================================================
+   DESKTOP MEDIA QUERIES (min-width: 992px)
+   ========================================================================= */
+@media (min-width: 992px) {
+  .accordion-container {
+    flex-direction: row;
+    height: 580px;
+    gap: 1rem;
+  }
+
+  .accordion-panel {
+    min-height: initial;
+    height: 100%;
+    flex: 0.7;
+  }
+
+  .accordion-panel.expanded {
+    height: 100%;
+    flex: 4;
+  }
+
+  .collapsed-label {
+    flex-direction: column;
+    padding: 2rem 1rem;
+  }
+
+  .collapsed-header-text {
+    flex-direction: column;
+  }
+
+  .vertical-title {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .mobile-chevron {
+    display: none;
+  }
+
+  .expanded-info-panel {
+    padding: 2.25rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .accordion-container {
+    height: 680px;
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1800px) {
+  .accordion-container {
+    height: 780px;
+    gap: 1.5rem;
+  }
 }
 </style>
