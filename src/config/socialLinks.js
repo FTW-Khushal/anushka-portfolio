@@ -1,8 +1,8 @@
 export const socialLinks = [
-  { name: 'LinkedIn', url: 'https://linkedin.com/in/anushkashah' },
-  { name: 'ArtStation', url: 'https://artstation.com/anushkashah' },
-  { name: 'IMDb', url: 'https://imdb.com/name/anushkashah' },
+  { name: 'LinkedIn', url: 'https://www.linkedin.com/in/anushka-j-shah/' },
+  // { name: 'ArtStation', url: 'https://www.artstation.com/anushkajshah' },
+  // { name: 'IMDb', url: 'https://www.imdb.com/name/nm14953784/' },
   { name: 'Vimeo', url: 'https://vimeo.com/anushkashah' },
-  { name: 'Instagram', url: 'https://www.instagram.com/artsy_with_anushka' }
+  { name: 'Instagram', url: 'https://www.instagram.com/anushah3008/' }
 ]
 

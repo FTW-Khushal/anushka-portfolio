@@ -11,6 +11,10 @@ const openMomentModal = (item) => {
   }
 }
 
+const openInstagram = () => {
+  window.open('https://www.instagram.com/anushah3008/', '_blank', 'noopener,noreferrer')
+}
+
 const closeMomentModal = () => {
   activeMomentModal.value = null
   document.body.style.overflow = ''
@@ -185,7 +189,7 @@ onUnmounted(() => {
                 v-if="item.type === 'image'"
                 class="mosaic-item-card image-card"
                 :style="item.style"
-                @click="openMomentModal(item)"
+                @click="openInstagram"
               >
                 <img :src="item.image" :alt="item.title" class="moment-img" loading="lazy" />
               </div>
@@ -212,7 +216,7 @@ onUnmounted(() => {
                 v-if="item.type === 'image'"
                 class="mosaic-item-card image-card"
                 :style="item.style"
-                @click="openMomentModal(item)"
+                @click="openInstagram"
               >
                 <img :src="item.image" :alt="item.title" class="moment-img" loading="lazy" />
               </div>
