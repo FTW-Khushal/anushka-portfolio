@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BeforeAfterSlider from './BeforeAfterSlider.vue'
 import { projectsData } from '../config/workData.js'
 
@@ -13,6 +13,104 @@ const vfxProjects = computed(() => {
 const goBack = () => {
   emit('navigate', 'home')
 }
+
+// Hero Parallax & Touch Drag Controls
+const currentPanX = ref(0) // Desktop X parallax (-3.5% to 3.5%)
+const currentPanY = ref(0) // Desktop Y parallax (-3.5% to 3.5%)
+const currentBgPanX = ref(0) // Mobile touch pan (-50 to 50 for background-position)
+const isHoveredOrTouched = ref(false)
+const hasSwiped = ref(false) // Hide swipe hint once user interacts
+
+let targetPanX = 0
+let targetPanY = 0
+let targetBgPanX = 0
+let animFrameId = null
+let autoPanAngle = 0
+let lastInteractionTime = Date.now()
+
+// Touch Drag tracking
+let touchStartX = 0
+let initialBgPanX = 0
+
+// Smooth Animation Loop (LERP physics)
+const animate = () => {
+  const now = Date.now()
+  const isIdle = !isHoveredOrTouched.value && (now - lastInteractionTime > 2500)
+
+  if (isIdle) {
+    // Gentle floating auto-pan when untouched
+    autoPanAngle += 0.004
+    targetPanX = Math.sin(autoPanAngle) * 2
+    targetPanY = Math.cos(autoPanAngle * 0.7) * 1.5
+  }
+
+  // Smooth LERP physics (dampening)
+  currentPanX.value += (targetPanX - currentPanX.value) * 0.08
+  currentPanY.value += (targetPanY - currentPanY.value) * 0.08
+  currentBgPanX.value += (targetBgPanX - currentBgPanX.value) * 0.12
+
+  animFrameId = requestAnimationFrame(animate)
+}
+
+// Mouse Move Parallax (Desktop)
+const handleMouseMove = (e) => {
+  isHoveredOrTouched.value = true
+  lastInteractionTime = Date.now()
+
+  const { innerWidth, innerHeight } = window
+  const normX = (e.clientX / innerWidth) - 0.5 // -0.5 to 0.5
+  const normY = (e.clientY / innerHeight) - 0.5
+
+  targetPanX = normX * -7 // Max +-3.5%
+  targetPanY = normY * -7 // Max +-3.5%
+}
+
+const handleMouseLeave = () => {
+  isHoveredOrTouched.value = false
+  lastInteractionTime = Date.now()
+}
+
+// Touch Drag Handlers (Mobile Swipe/Drag)
+const handleTouchStart = (e) => {
+  if (e.touches.length === 1) {
+    isHoveredOrTouched.value = true
+    hasSwiped.value = true
+    lastInteractionTime = Date.now()
+    touchStartX = e.touches[0].clientX
+    initialBgPanX = targetBgPanX
+  }
+}
+
+const handleTouchMove = (e) => {
+  if (e.touches.length === 1 && isHoveredOrTouched.value) {
+    lastInteractionTime = Date.now()
+    const deltaX = e.touches[0].clientX - touchStartX
+    
+    // Scale delta to percentage pan of the background position
+    // deltaX is in pixels. Dragging left (negative deltaX) should pan right (increase bg position)
+    const deltaPercent = (deltaX / window.innerWidth) * -100
+    
+    // Clamp to [-50, 50] to keep background position between 0% and 100%
+    targetBgPanX = Math.max(-50, Math.min(50, initialBgPanX + deltaPercent))
+  }
+}
+
+const handleTouchEnd = () => {
+  isHoveredOrTouched.value = false
+  lastInteractionTime = Date.now()
+}
+
+onMounted(() => {
+  animFrameId = requestAnimationFrame(animate)
+  window.addEventListener('mousemove', handleMouseMove)
+})
+
+onUnmounted(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('mousemove', handleMouseMove)
+  }
+})
 </script>
 
 <template>
@@ -21,14 +119,35 @@ const goBack = () => {
     <div class="film-grain"></div>
 
     <!-- Full-Width Hero Section -->
-    <section class="hero-section">
+    <section 
+      class="hero-section"
+      @mouseleave="handleMouseLeave"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
       <div class="hero-bg-container">
-        <div class="hero-bg-image"></div>
+        <div 
+          class="hero-bg-image"
+          :style="{
+            transform: `translate3d(${currentPanX}%, ${currentPanY}%, 0)`,
+            backgroundPosition: `${50 + currentBgPanX}% 50%`
+          }"
+        ></div>
         <div class="hero-bg-overlay"></div>
       </div>
-      <div class="hero-content container">
 
-        
+      <!-- Mobile Touch Swipe Hint Badge (Mobile Only) -->
+      <div class="mobile-swipe-hint" :class="{ 'fade-out': hasSwiped }">
+        <div class="hint-pill">
+          <svg class="swipe-arrow left" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span>Drag left or right to explore</span>
+          <svg class="swipe-arrow right" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+
+      <!-- Hero Content Container -->
+      <div class="hero-content container">
         <div class="hero-title-wrapper">
           <h1 class="hero-title">VISUAL EFFECTS</h1>
           <p class="hero-description">
@@ -174,15 +293,83 @@ const goBack = () => {
 
 .hero-bg-image {
   position: absolute;
-  top: 0;
-  left: -5%;
-  width: 110%;
-  height: 100%;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
   background-image: url('https://cdn.prod.website-files.com/680aa9a18fba68b1fec52c0d/680ab8a0a657e2b0ad0bf586_Screenshot2025-04-1322424.jpeg');
   background-size: cover;
   background-position: center;
-  /* Camera Pan Animation */
-  animation: cameraPan 35s linear infinite alternate;
+  will-change: transform, background-position;
+}
+
+.hero-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(5,5,5,1) 0%, rgba(5,5,5,0.4) 50%, rgba(5,5,5,0.7) 100%);
+}
+
+/* Mobile Touch Swipe Hint Badge */
+.mobile-swipe-hint {
+  display: none; /* Hidden on desktop */
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.mobile-swipe-hint.fade-out {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
+
+.hint-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.55rem 1.2rem;
+  border-radius: 30px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.swipe-arrow {
+  color: #38bdf8;
+}
+
+.swipe-arrow.left {
+  animation: bounceLeft 1.6s infinite ease-in-out;
+}
+
+.swipe-arrow.right {
+  animation: bounceRight 1.6s infinite ease-in-out;
+}
+
+@keyframes bounceLeft {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-4px); }
+}
+
+@keyframes bounceRight {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+@media (max-width: 768px) {
+  .mobile-swipe-hint {
+    display: flex;
+  }
 }
 
 .hero-bg-overlay {
