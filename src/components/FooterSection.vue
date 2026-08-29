@@ -51,12 +51,21 @@ const packedTapestry = computed(() => {
     let imgWidth = 260;
     let itemRows = 1;
     
-    if (img.aspect === 'span-wide-1') {
+    // Dynamically calculate aspect ratio to determine grid spans
+    const ratio = (img.width || 1000) / (img.height || 1000);
+    
+    if (ratio >= 1.2) {
+      // Wide (e.g. 16:9)
       imgWidth = 400;
       itemRows = 1;
-    } else if (img.aspect === 'span-tall-2') {
+    } else if (ratio <= 0.8) {
+      // Tall (e.g. 4:5 or 2:3)
       imgWidth = 360;
       itemRows = 2;
+    } else {
+      // Squareish
+      imgWidth = 260;
+      itemRows = 1;
     }
     
     // Clamp itemRows to the maximum available rows
