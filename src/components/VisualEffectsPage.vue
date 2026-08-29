@@ -14,23 +14,17 @@ const goBack = () => {
   emit('navigate', 'home')
 }
 
-// Camera Viewfinder & Gyroscope Controls
+// Hero Parallax & Touch Drag Controls
 const currentPanX = ref(0) // Smoothed pan percentage (-38% to 38%)
 const currentPanY = ref(0) // Smoothed pitch percentage (-14% to 14%)
-const rollAngle = ref(0)   // Sensor roll angle for horizon level indicator
-const isGyroActive = ref(false)
-const needsGyroPermission = ref(false)
-const timecode = ref('00:00:00:00')
 const isHoveredOrTouched = ref(false)
+const hasSwiped = ref(false) // Hide swipe hint once user interacts
 
 let targetPanX = 0
 let targetPanY = 0
-let targetRoll = 0
 let animFrameId = null
-let timecodeInterval = null
 let autoPanAngle = 0
 let lastInteractionTime = Date.now()
-let initialAlpha = null
 
 // Touch Drag tracking
 let touchStartX = 0
@@ -38,110 +32,27 @@ let touchStartY = 0
 let initialPanX = 0
 let initialPanY = 0
 
-// Format Timecode
-let startTime = Date.now()
-const updateTimecode = () => {
-  const elapsed = Date.now() - startTime
-  const ms = Math.floor((elapsed % 1000) / 40)
-  const sec = Math.floor((elapsed / 1000) % 60)
-  const min = Math.floor((elapsed / (1000 * 60)) % 60)
-  const hrs = Math.floor((elapsed / (1000 * 60 * 60)) % 24)
-  
-  timecode.value = `${String(hrs).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}:${String(ms).padStart(2, '0')}`
-}
-
-// Recenter Gyro Zero Point
-const recenterGyro = () => {
-  initialAlpha = null
-}
-
-// Smooth Animation Loop (LERP)
+// Smooth Animation Loop (LERP physics)
 const animate = () => {
   const now = Date.now()
-  const isIdle = !isGyroActive.value && !isHoveredOrTouched.value && (now - lastInteractionTime > 2000)
+  const isIdle = !isHoveredOrTouched.value && (now - lastInteractionTime > 2500)
 
   if (isIdle) {
     // Gentle floating auto-pan when untouched
     autoPanAngle += 0.004
     targetPanX = Math.sin(autoPanAngle) * 16
     targetPanY = Math.cos(autoPanAngle * 0.7) * 6
-    targetRoll = Math.sin(autoPanAngle * 0.5) * 2
   }
 
   // Smooth LERP physics (dampening)
   currentPanX.value += (targetPanX - currentPanX.value) * 0.07
   currentPanY.value += (targetPanY - currentPanY.value) * 0.07
-  rollAngle.value += (targetRoll - rollAngle.value) * 0.09
 
   animFrameId = requestAnimationFrame(animate)
 }
 
-// Handle Device Orientation Event (Gyroscope)
-const handleOrientation = (e) => {
-  if (e.beta === null && e.gamma === null) return
-  isGyroActive.value = true
-  lastInteractionTime = Date.now()
-
-  const alpha = e.alpha || 0
-  const beta = e.beta || 0
-  const gamma = e.gamma || 0
-
-  if (initialAlpha === null) {
-    initialAlpha = alpha
-  }
-
-  // Calculate shortest angle delta for alpha (yaw / swivel left-right)
-  let diffAlpha = alpha - initialAlpha
-  if (diffAlpha > 180) diffAlpha -= 360
-  if (diffAlpha < -180) diffAlpha += 360
-
-  // Combine swivel (diffAlpha) and tilt (gamma) so both ways of turning phone work!
-  const combinedX = (diffAlpha * 0.9) + (gamma * 0.8)
-
-  // Clamp combined X to [-45, 45]
-  const clampedX = Math.max(-45, Math.min(45, combinedX))
-
-  // Pitch (up/down): natural holding pitch is around 45 deg
-  const clampedY = Math.max(-25, Math.min(25, beta - 45))
-
-  // Map to background pan range (-38% to 38% for dramatic left/right panning)
-  targetPanX = (clampedX / 45) * -38 // Reverse so turning right pans camera view right
-  targetPanY = (clampedY / 25) * -14
-  targetRoll = Math.max(-15, Math.min(15, gamma * 0.4))
-}
-
-// Request Permission for iOS 13+
-const requestGyroPermission = async () => {
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    try {
-      const permission = await DeviceOrientationEvent.requestPermission()
-      if (permission === 'granted') {
-        needsGyroPermission.value = false
-        initialAlpha = null
-        window.addEventListener('deviceorientation', handleOrientation)
-      } else {
-        alert('Permission denied. Touch or drag to pan the camera view.')
-      }
-    } catch (err) {
-      console.error('Gyro permission error:', err)
-    }
-  }
-}
-
-// Check if iOS permission is required or register gyro event listener
-const checkGyroSupport = () => {
-  if (typeof window !== 'undefined' && typeof DeviceOrientationEvent !== 'undefined') {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      needsGyroPermission.value = true
-    } else {
-      window.addEventListener('deviceorientation', handleOrientation)
-    }
-  }
-}
-
 // Mouse Move Parallax (Desktop)
 const handleMouseMove = (e) => {
-  if (isGyroActive.value) return
   isHoveredOrTouched.value = true
   lastInteractionTime = Date.now()
 
@@ -149,9 +60,8 @@ const handleMouseMove = (e) => {
   const normX = (e.clientX / innerWidth) - 0.5 // -0.5 to 0.5
   const normY = (e.clientY / innerHeight) - 0.5
 
-  targetPanX = normX * -35 // Pan up to 17.5%
+  targetPanX = normX * -35 // Pan up to 17.5% left/right
   targetPanY = normY * -14
-  targetRoll = normX * -5
 }
 
 const handleMouseLeave = () => {
@@ -159,10 +69,11 @@ const handleMouseLeave = () => {
   lastInteractionTime = Date.now()
 }
 
-// Touch Drag Handlers (Mobile Fallback / Touch Pan)
+// Touch Drag Handlers (Mobile Swipe/Drag)
 const handleTouchStart = (e) => {
   if (e.touches.length === 1) {
     isHoveredOrTouched.value = true
+    hasSwiped.value = true
     lastInteractionTime = Date.now()
     touchStartX = e.touches[0].clientX
     touchStartY = e.touches[0].clientY
@@ -189,17 +100,13 @@ const handleTouchEnd = () => {
 }
 
 onMounted(() => {
-  checkGyroSupport()
   animFrameId = requestAnimationFrame(animate)
-  timecodeInterval = setInterval(updateTimecode, 40)
   window.addEventListener('mousemove', handleMouseMove)
 })
 
 onUnmounted(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId)
-  if (timecodeInterval) clearInterval(timecodeInterval)
   if (typeof window !== 'undefined') {
-    window.removeEventListener('deviceorientation', handleOrientation)
     window.removeEventListener('mousemove', handleMouseMove)
   }
 })
@@ -228,69 +135,12 @@ onUnmounted(() => {
         <div class="hero-bg-overlay"></div>
       </div>
 
-      <!-- Camera Viewfinder HUD Overlay -->
-      <div class="viewfinder-hud">
-        <!-- Corner Frame Brackets -->
-        <div class="corner-reticle top-left"></div>
-        <div class="corner-reticle top-right"></div>
-        <div class="corner-reticle bottom-left"></div>
-        <div class="corner-reticle bottom-right"></div>
-
-        <!-- Top Status Bar -->
-        <div class="hud-top-bar">
-          <div class="rec-badge">
-            <span class="rec-dot"></span>
-            <span class="rec-text">REC</span>
-            <span class="timecode">{{ timecode }}</span>
-          </div>
-          <div class="format-badge">
-            <span class="spec-tag">4K DCI</span>
-            <span class="spec-tag">RAW 60FPS</span>
-          </div>
-        </div>
-
-        <!-- Center Aim Crosshair / Focus Frame -->
-        <div class="hud-center-target">
-          <div class="target-box">
-            <div class="target-cross"></div>
-          </div>
-        </div>
-
-        <!-- Bottom Spec & Gyro Controls Bar -->
-        <div class="hud-bottom-bar">
-          <div class="camera-specs">
-            <span>ISO 800</span>
-            <span>1/48s</span>
-            <span>f/2.8</span>
-            <span>PRORES 4444</span>
-          </div>
-
-          <!-- Electronic Horizon Level Indicator -->
-          <div class="horizon-level-wrapper" title="Electronic Horizon Level">
-            <div class="horizon-line" :style="{ transform: `rotate(${rollAngle}deg)` }">
-              <span class="level-center-dot"></span>
-            </div>
-          </div>
-
-          <!-- Gyro Sensor Control / Mode Status -->
-          <div class="gyro-status-badge">
-            <button 
-              v-if="needsGyroPermission && !isGyroActive" 
-              class="gyro-enable-btn"
-              @click="requestGyroPermission"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-              ENABLE LENS GYRO
-            </button>
-            <div v-else-if="isGyroActive" class="gyro-active-indicator">
-              <span class="pulse-icon"></span>
-              GYRO PAN ACTIVE
-            </div>
-            <div v-else class="gyro-hint-indicator">
-              <span class="drag-icon">↔</span>
-              TILT OR SWIPE TO PAN
-            </div>
-          </div>
+      <!-- Mobile Touch Swipe Hint Badge (Mobile Only) -->
+      <div class="mobile-swipe-hint" :class="{ 'fade-out': hasSwiped }">
+        <div class="hint-pill">
+          <svg class="swipe-arrow left" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span>Drag left or right to explore</span>
+          <svg class="swipe-arrow right" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
         </div>
       </div>
 
@@ -458,292 +308,67 @@ onUnmounted(() => {
   background: linear-gradient(to top, rgba(5,5,5,1) 0%, rgba(5,5,5,0.4) 50%, rgba(5,5,5,0.7) 100%);
 }
 
-/* Camera Viewfinder HUD Overlay */
-.viewfinder-hud {
+/* Mobile Touch Swipe Hint Badge */
+.mobile-swipe-hint {
+  display: none; /* Hidden on desktop */
   position: absolute;
-  inset: 0;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
   pointer-events: none;
-  z-index: 3;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
-/* Corner Frame Brackets */
-.corner-reticle {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border-color: rgba(255, 255, 255, 0.4);
-  border-style: solid;
-  pointer-events: none;
+.mobile-swipe-hint.fade-out {
+  opacity: 0;
+  transform: translate(-50%, 10px);
 }
 
-.top-left {
-  top: 1.5rem;
-  left: 1.5rem;
-  border-width: 2px 0 0 2px;
-}
-
-.top-right {
-  top: 1.5rem;
-  right: 1.5rem;
-  border-width: 2px 2px 0 0;
-}
-
-.bottom-left {
-  bottom: 1.5rem;
-  left: 1.5rem;
-  border-width: 0 0 2px 2px;
-}
-
-.bottom-right {
-  bottom: 1.5rem;
-  right: 1.5rem;
-  border-width: 0 2px 2px 0;
-}
-
-/* Top Status Bar */
-.hud-top-bar {
+.hint-pill {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding-top: 0.5rem;
-}
-
-.rec-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.5);
+  gap: 0.6rem;
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(12px);
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  font-family: monospace, monospace;
-  font-size: 0.85rem;
-  color: #ffffff;
-}
-
-.rec-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
-  animation: recBlink 1.2s infinite;
-}
-
-@keyframes recBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.2; }
-}
-
-.rec-text {
-  font-weight: 700;
-  color: #ef4444;
-  letter-spacing: 0.05em;
-}
-
-.timecode {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.55rem 1.2rem;
+  border-radius: 30px;
   color: #e2e8f0;
-  margin-left: 0.4rem;
-  font-weight: 600;
+  font-size: 0.82rem;
+  font-family: var(--font-family);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
 }
 
-.format-badge {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.spec-tag {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(12px);
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  letter-spacing: 0.05em;
-}
-
-/* Center Reticle Target */
-.hud-center-target {
-  position: absolute;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-.target-box {
-  width: 50px;
-  height: 50px;
-  border: 1px dashed rgba(255, 255, 255, 0.6);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.target-cross {
-  width: 10px;
-  height: 10px;
-  position: relative;
-}
-
-.target-cross::before, .target-cross::after {
-  content: '';
-  position: absolute;
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.target-cross::before {
-  top: 4px;
-  left: 0;
-  width: 10px;
-  height: 2px;
-}
-
-.target-cross::after {
-  top: 0;
-  left: 4px;
-  width: 2px;
-  height: 10px;
-}
-
-/* Bottom Bar Specs & Horizon Level */
-.hud-bottom-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding-bottom: 0.5rem;
-  gap: 1rem;
-}
-
-.camera-specs {
-  display: flex;
-  gap: 0.8rem;
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: #cbd5e1;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Electronic Horizon Level */
-.horizon-level-wrapper {
-  width: 90px;
-  height: 16px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.horizon-line {
-  width: 60px;
-  height: 2px;
-  background: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
-  position: relative;
-  transition: transform 0.1s linear;
-}
-
-.level-center-dot {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 4px;
-  background: #ffffff;
-  border-radius: 50%;
-}
-
-/* Gyro Button & Status Indicators */
-.gyro-status-badge {
-  pointer-events: auto;
-}
-
-.gyro-enable-btn {
-  background: rgba(56, 189, 248, 0.2);
-  border: 1px solid rgba(56, 189, 248, 0.5);
+.swipe-arrow {
   color: #38bdf8;
-  font-family: monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: all 0.3s ease;
 }
 
-.gyro-enable-btn:hover {
-  background: rgba(56, 189, 248, 0.35);
-  transform: scale(1.05);
+.swipe-arrow.left {
+  animation: bounceLeft 1.6s infinite ease-in-out;
 }
 
-.gyro-active-indicator, .gyro-hint-indicator {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.swipe-arrow.right {
+  animation: bounceRight 1.6s infinite ease-in-out;
 }
 
-.pulse-icon {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #38bdf8;
-  box-shadow: 0 0 6px #38bdf8;
-  animation: recBlink 1.5s infinite;
+@keyframes bounceLeft {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-4px); }
 }
 
-.drag-icon {
-  color: #38bdf8;
+@keyframes bounceRight {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
 }
 
 @media (max-width: 768px) {
-  .camera-specs {
-    display: none; /* Hide dense specs on small screens to keep UI clean */
+  .mobile-swipe-hint {
+    display: flex;
   }
-  
-  .spec-tag:not(:first-child) {
-    display: none;
-  }
-  
-  .viewfinder-hud {
-    padding: 1rem;
-  }
-  
-  .top-left { top: 1rem; left: 1rem; }
-  .top-right { top: 1rem; right: 1rem; }
-  .bottom-left { bottom: 1rem; left: 1rem; }
-  .bottom-right { bottom: 1rem; right: 1rem; }
 }
 
 .hero-bg-overlay {
