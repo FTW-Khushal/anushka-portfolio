@@ -15,22 +15,22 @@ const goBack = () => {
 }
 
 // Hero Parallax & Touch Drag Controls
-const currentPanX = ref(0) // Smoothed pan percentage (-38% to 38%)
-const currentPanY = ref(0) // Smoothed pitch percentage (-14% to 14%)
+const currentPanX = ref(0) // Desktop X parallax (-3.5% to 3.5%)
+const currentPanY = ref(0) // Desktop Y parallax (-3.5% to 3.5%)
+const currentBgPanX = ref(0) // Mobile touch pan (-50 to 50 for background-position)
 const isHoveredOrTouched = ref(false)
 const hasSwiped = ref(false) // Hide swipe hint once user interacts
 
 let targetPanX = 0
 let targetPanY = 0
+let targetBgPanX = 0
 let animFrameId = null
 let autoPanAngle = 0
 let lastInteractionTime = Date.now()
 
 // Touch Drag tracking
 let touchStartX = 0
-let touchStartY = 0
-let initialPanX = 0
-let initialPanY = 0
+let initialBgPanX = 0
 
 // Smooth Animation Loop (LERP physics)
 const animate = () => {
@@ -40,13 +40,14 @@ const animate = () => {
   if (isIdle) {
     // Gentle floating auto-pan when untouched
     autoPanAngle += 0.004
-    targetPanX = Math.sin(autoPanAngle) * 16
-    targetPanY = Math.cos(autoPanAngle * 0.7) * 6
+    targetPanX = Math.sin(autoPanAngle) * 2
+    targetPanY = Math.cos(autoPanAngle * 0.7) * 1.5
   }
 
   // Smooth LERP physics (dampening)
-  currentPanX.value += (targetPanX - currentPanX.value) * 0.07
-  currentPanY.value += (targetPanY - currentPanY.value) * 0.07
+  currentPanX.value += (targetPanX - currentPanX.value) * 0.08
+  currentPanY.value += (targetPanY - currentPanY.value) * 0.08
+  currentBgPanX.value += (targetBgPanX - currentBgPanX.value) * 0.12
 
   animFrameId = requestAnimationFrame(animate)
 }
@@ -60,8 +61,8 @@ const handleMouseMove = (e) => {
   const normX = (e.clientX / innerWidth) - 0.5 // -0.5 to 0.5
   const normY = (e.clientY / innerHeight) - 0.5
 
-  targetPanX = normX * -35 // Pan up to 17.5% left/right
-  targetPanY = normY * -14
+  targetPanX = normX * -7 // Max +-3.5%
+  targetPanY = normY * -7 // Max +-3.5%
 }
 
 const handleMouseLeave = () => {
@@ -76,9 +77,7 @@ const handleTouchStart = (e) => {
     hasSwiped.value = true
     lastInteractionTime = Date.now()
     touchStartX = e.touches[0].clientX
-    touchStartY = e.touches[0].clientY
-    initialPanX = targetPanX
-    initialPanY = targetPanY
+    initialBgPanX = targetBgPanX
   }
 }
 
@@ -86,11 +85,13 @@ const handleTouchMove = (e) => {
   if (e.touches.length === 1 && isHoveredOrTouched.value) {
     lastInteractionTime = Date.now()
     const deltaX = e.touches[0].clientX - touchStartX
-    const deltaY = e.touches[0].clientY - touchStartY
     
-    // Scale delta to percentage pan
-    targetPanX = Math.max(-38, Math.min(38, initialPanX + (deltaX / window.innerWidth) * 60))
-    targetPanY = Math.max(-14, Math.min(14, initialPanY + (deltaY / window.innerHeight) * 25))
+    // Scale delta to percentage pan of the background position
+    // deltaX is in pixels. Dragging left (negative deltaX) should pan right (increase bg position)
+    const deltaPercent = (deltaX / window.innerWidth) * -100
+    
+    // Clamp to [-50, 50] to keep background position between 0% and 100%
+    targetBgPanX = Math.max(-50, Math.min(50, initialBgPanX + deltaPercent))
   }
 }
 
@@ -129,7 +130,8 @@ onUnmounted(() => {
         <div 
           class="hero-bg-image"
           :style="{
-            transform: `scale(1.25) translate3d(${currentPanX}%, ${currentPanY}%, 0)`
+            transform: `translate3d(${currentPanX}%, ${currentPanY}%, 0)`,
+            backgroundPosition: `${50 + currentBgPanX}% 50%`
           }"
         ></div>
         <div class="hero-bg-overlay"></div>
@@ -291,15 +293,14 @@ onUnmounted(() => {
 
 .hero-bg-image {
   position: absolute;
-  top: -20%;
-  left: -40%;
-  width: 180%;
-  height: 140%;
+  top: -4%;
+  left: -4%;
+  width: 108%;
+  height: 108%;
   background-image: url('https://cdn.prod.website-files.com/680aa9a18fba68b1fec52c0d/680ab8a0a657e2b0ad0bf586_Screenshot2025-04-1322424.jpeg');
   background-size: cover;
   background-position: center;
-  will-change: transform;
-  transition: transform 0.05s ease-out;
+  will-change: transform, background-position;
 }
 
 .hero-bg-overlay {
