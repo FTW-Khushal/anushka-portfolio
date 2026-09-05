@@ -1,8 +1,64 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { tapestryImages, fillerQuotes } from '../config/momentsData.js'
+import emailjs from '@emailjs/browser'
 
 const activeMomentModal = ref(null)
+const isSubmitting = ref(false)
+const submitSuccess = ref(false)
+const submitError = ref('')
+const contactForm = ref(null)
+
+const sendEmail = async () => {
+  isSubmitting.value = true
+  submitSuccess.value = false
+  submitError.value = ''
+
+  try {
+    await emailjs.sendForm(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID',
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID',
+      contactForm.value,
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_PUBLIC_KEY'
+    )
+    submitSuccess.value = true
+    contactForm.value.reset()
+    // Reset aria-invalid attributes after successful reset
+    contactForm.value.querySelectorAll('input, textarea').forEach(el => {
+      el.removeAttribute('aria-invalid')
+    })
+  } catch (error) {
+    submitError.value = error.text || 'Failed to send message. Please try again.'
+    console.error('EmailJS Error:', error)
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// Modern Web Guidance: Sync aria-invalid with native validity
+const syncAriaInvalid = (input) => {
+  if (!input.checkValidity()) {
+    input.setAttribute('aria-invalid', 'true');
+  } else {
+    input.removeAttribute('aria-invalid');
+  }
+};
+
+const handleFormBlur = (e) => {
+  if (e.target.matches('input[required], textarea[required]')) {
+    syncAriaInvalid(e.target);
+  }
+}
+
+const handleFormInput = (e) => {
+  if (e.target.matches('input[required], textarea[required]') && e.target.checkValidity()) {
+    e.target.removeAttribute('aria-invalid');
+  }
+}
+
+const handleFormInvalid = (e) => {
+  syncAriaInvalid(e.target);
+}
 
 const openMomentModal = (item) => {
   if (item.type === 'image') {
@@ -274,15 +330,55 @@ onUnmounted(() => {
           Interested in collaborating on Lighting, Compositing, VFX production, or Photography?
         </p>
 
-        <div class="cta-actions">
-          <a href="mailto:ajs197430@gmail.com" class="email-btn">
-            <span>ajs197430@gmail.com</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
-            </svg>
-          </a>
-        </div>
+        <form 
+          ref="contactForm" 
+          class="modern-contact-form" 
+          @submit.prevent="sendEmail" 
+          @blur.capture="handleFormBlur" 
+          @input="handleFormInput" 
+          @invalid.capture="handleFormInvalid"
+        >
+          <div class="form-field">
+            <label for="from_name">Name</label>
+            <input type="text" id="from_name" name="from_name" required aria-errormessage="name-error" placeholder="Your Name" />
+            <div id="name-error" class="error-msg">
+              <span aria-hidden="true">❌</span> Name is required.
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="reply_to">Email</label>
+            <input type="email" id="reply_to" name="reply_to" required aria-errormessage="email-error" placeholder="your@email.com" />
+            <div id="email-error" class="error-msg">
+              <span aria-hidden="true">❌</span> Valid email is required.
+            </div>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="message">Message</label>
+            <textarea id="message" name="message" rows="4" required aria-errormessage="msg-error" placeholder="How can we collaborate?"></textarea>
+            <div id="msg-error" class="error-msg">
+              <span aria-hidden="true">❌</span> Message cannot be empty.
+            </div>
+          </div>
+
+          <div class="form-actions full-width">
+            <button type="submit" class="email-btn" :disabled="isSubmitting">
+              <span v-if="isSubmitting">Sending...</span>
+              <span v-else>Send Message</span>
+              <svg v-if="!isSubmitting" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <p v-if="submitSuccess" class="status-msg success">
+              <span aria-hidden="true"></span> I will reach you back soon as possible! Have a great day.
+            </p>
+            <p v-if="submitError" class="status-msg error">
+              <span aria-hidden="true"></span> {{ submitError }}
+            </p>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -503,7 +599,7 @@ onUnmounted(() => {
 .filler-cat {
   font-size: 0.725rem;
   font-weight: 800;
-  color: #94a3b8;
+  color: var(--accent-blue);
   letter-spacing: 0.15em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -535,7 +631,7 @@ onUnmounted(() => {
   @media (min-width: 992px) {
     grid-template-columns: 1fr 1.2fr;
     gap: 4.5rem;
-    align-items: center;
+    align-items: flex-start; /* Better alignment for unbalanced columns */
   }
 }
 
@@ -549,7 +645,7 @@ onUnmounted(() => {
 }
 
 .quote-icon {
-  color: #94a3b8;
+  color: var(--accent-blue);
   margin-bottom: 1.25rem;
   opacity: 0.8;
 }
@@ -573,6 +669,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 100%;
 }
 
 .caption-cta {
@@ -613,8 +710,118 @@ onUnmounted(() => {
 
 .email-btn:hover {
   transform: translateY(-3px);
-  background-color: #f1f5f9;
-  box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3);
+  background-color: var(--accent-blue);
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.3);
+}
+
+.email-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* =========================================================================
+   CONTACT FORM
+   ========================================================================= */
+.modern-contact-form {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .modern-contact-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .form-field.full-width,
+  .form-actions.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  font-family: var(--font-family);
+  font-size: 1rem;
+  transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
+  box-sizing: border-box;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.6);
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+}
+
+/* Modern Validation Feedback */
+.error-msg {
+  display: none;
+  color: #ef4444; 
+  font-size: 0.825rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.form-field input:user-invalid,
+.form-field textarea:user-invalid {
+  border-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.05);
+}
+
+.form-field input:user-invalid + .error-msg,
+.form-field textarea:user-invalid + .error-msg {
+  display: block;
+}
+
+.form-field input:required:user-valid,
+.form-field textarea:required:user-valid {
+  border-color: #10b981;
+}
+
+.form-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.status-msg {
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-msg.success {
+  color: var(--accent-blue);
+}
+
+.status-msg.error {
+  color: #ef4444;
 }
 
 /* =========================================================================
@@ -668,7 +875,7 @@ onUnmounted(() => {
 }
 
 .social-link:hover {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .bottom-bar {
@@ -701,7 +908,7 @@ onUnmounted(() => {
 }
 
 .back-to-top:hover {
-  color: #ffffff;
+  color: var(--accent-blue);
   transform: translateY(-2px);
 }
 
@@ -759,7 +966,7 @@ onUnmounted(() => {
 .modal-cat {
   font-size: 0.775rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--accent-blue);
   text-transform: uppercase;
 }
 

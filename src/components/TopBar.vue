@@ -366,14 +366,14 @@ onUnmounted(() => {
   left: 0;
   width: 0%;
   height: 2px;
-  background-color: #ffffff;
+  background-color: var(--accent-blue);
   transition: width 0.25s ease;
   border-radius: 2px;
 }
 
 .nav-link:hover,
 .nav-link.is-active {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .nav-link:hover::after,
@@ -382,7 +382,7 @@ onUnmounted(() => {
 }
 
 .mobile-nav-link.is-active {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .dropdown-trigger {
@@ -535,7 +535,7 @@ onUnmounted(() => {
 }
 
 .mobile-sub-link:hover {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 /* Mobile Animations */

@@ -257,7 +257,7 @@ onUnmounted(() => {
 }
 
 .back-btn:hover {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .gallery-title {
@@ -297,14 +297,14 @@ onUnmounted(() => {
 }
 
 .filter-btn:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: #ffffff;
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 .filter-btn.active {
-  background: #ffffff;
+  background: var(--accent-blue);
   color: #000000;
-  border-color: #ffffff;
+  border-color: var(--accent-blue);
 }
 
 /* JS Masonry Layout */
@@ -335,7 +335,7 @@ onUnmounted(() => {
 
 .masonry-item:hover {
   transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--accent-blue);
 }
 
 .image-wrapper {
@@ -449,7 +449,7 @@ onUnmounted(() => {
 }
 
 .modal-tag {
-  color: #f59e0b;
+  color: var(--accent-blue);
   text-transform: uppercase;
 }
 

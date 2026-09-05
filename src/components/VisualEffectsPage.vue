@@ -492,7 +492,6 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8rem; /* Increased gap to allow glow to breathe */
-  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -527,7 +526,6 @@ onUnmounted(() => {
 
 /* Before & After Section */
 .slider-wrapper {
-  max-width: 1200px;
   margin: 0 auto;
 }
 

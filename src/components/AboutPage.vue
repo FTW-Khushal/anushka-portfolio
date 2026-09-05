@@ -396,11 +396,11 @@ const handleHoverLeave = () => {
 }
 
 .btn-clean:hover {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .btn-clean:hover::after {
-  background-color: #ffffff;
+  background-color: var(--accent-blue);
 }
 
 /* Timeline (Contact Sheet Style) */
@@ -422,7 +422,7 @@ const handleHoverLeave = () => {
 .timeline-row:hover,
 .timeline-row.is-active {
   background-color: rgba(255, 255, 255, 0.03);
-  border-left-color: #ffffff;
+  border-left-color: var(--accent-blue);
   padding-left: 0.85rem;
 }
 
@@ -448,7 +448,7 @@ const handleHoverLeave = () => {
 
 .timeline-row:hover .row-title,
 .timeline-row.is-active .row-title {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .row-org {
@@ -487,7 +487,7 @@ const handleHoverLeave = () => {
   background-color: rgba(255, 255, 255, 0.03);
   padding-left: 0.85rem;
   padding-right: 0.85rem;
-  border-left-color: #ffffff;
+  border-left-color: var(--accent-blue);
 }
 
 .item-name {
@@ -499,7 +499,7 @@ const handleHoverLeave = () => {
 
 .list-item:hover .item-name,
 .list-item.is-active .item-name {
-  color: #ffffff;
+  color: var(--accent-blue);
 }
 
 .item-meta {
@@ -552,9 +552,9 @@ const handleHoverLeave = () => {
 }
 
 .lang-tag:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background-color: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--accent-blue);
   transform: translateY(-2px);
 }
 

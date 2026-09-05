@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.8",
+    "@emailjs/browser": "^4.4.1",
     "@types/three": "^0.185.1",
     "imagesloaded": "^5.0.0",
     "isotope-layout": "^3.0.6",

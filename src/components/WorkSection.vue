@@ -314,9 +314,9 @@ const handlePanelClick = (catId) => {
 .accordion-panel.expanded:hover .arrow-icon,
 .accordion-panel.expanded:active .arrow-icon {
   transform: translateX(5px);
-  background: #ffffff;
+  background: var(--accent-blue);
   color: #000000;
-  border-color: #ffffff;
+  border-color: var(--accent-blue);
 }
 
 /* =========================================================================

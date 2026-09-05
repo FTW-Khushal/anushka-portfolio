@@ -31,16 +31,28 @@ const portraitImages = [
         <!-- Left Column: Sticky Info -->
         <div class="info-column-sticky">
           <!-- <span class="caption">01 // ABOUT ME</span> -->
-          <h2 class="section-title">Hi,I'm Anushka Shah — a Visual Effects Artist based in Vancouver with a focus on Lighting and Compositing.</h2>
+          <h2 class="section-title">
+            Hi, I'm Anushka.<br/>
+            <span class="text-highlight">VFX Artist & Lighter</span> based in Vancouver.
+          </h2>
           <p class="bio-text">
-            I blend technical precision with artistic insight to craft cinematic visuals that support storytelling through light, color, and composition.
+            Blending technical precision with artistic insight to craft cinematic visuals through <strong class="text-white">light, color, and composition</strong>.
           </p>
-          <p class="bio-subtext">
-            With a background in Traditional Art, Design, and Photography, I bring a strong visual foundation and a deep understanding of mood and atmosphere to every project. My experience behind the camera informs my eye for framing, depth, and lighting — both in real and digital environments.
-          </p>
-
-          <p class="bio-subtext">
-            I earned my diploma in Advanced Visual Effects from Kwantlen Polytechnic University and am proficient in industry-standard tools like Nuke, Katana, Maya, and Photoshop. Two years of Color Theory study further sharpened my sense of tone and detail, helping me create emotionally rich, visually compelling scenes. </p>
+          
+          <div class="skills-cluster">
+            <div class="skill-group">
+              <span class="skill-label">Focus</span>
+              <p class="skill-list">Lighting • Compositing • LookDev</p>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label">Toolkit</span>
+              <p class="skill-list">Nuke • Katana • Maya • Photoshop</p>
+            </div>
+            <div class="skill-group">
+              <span class="skill-label">Background</span>
+              <p class="skill-list">Traditional Art • Photography • Color Theory</p>
+            </div>
+          </div>
 
           <button class="cta-button" @click="$emit('navigate', 'about')">
             <span>More About Me</span>
@@ -169,11 +181,43 @@ const portraitImages = [
   margin-bottom: 1rem;
 }
 
-.bio-subtext {
-  font-size: 0.925rem;
-  color: #94a3b8;
-  line-height: 1.6;
-  margin-bottom: 2rem;
+.text-highlight {
+  color: #38bdf8;
+}
+
+.text-white {
+  color: #ffffff;
+}
+
+.skills-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 2rem 0 2.5rem;
+  padding-left: 1.25rem;
+  border-left: 2px solid rgba(56, 189, 248, 0.4);
+}
+
+.skill-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.skill-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #64748b;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.skill-list {
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
 }
 
 /* CTA Button */
@@ -192,8 +236,9 @@ const portraitImages = [
 
 .cta-button:hover {
   transform: translateY(-3px);
-  background-color: #f1f5f9;
-  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.25);
+  background-color: var(--accent-blue);
+  color: #000000;
+  box-shadow: 0 10px 25px rgba(56, 189, 248, 0.25);
 }
 
 /* ── Stacking Images Column ── */
